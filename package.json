@@ -1,0 +1,25 @@
+{
+  "name": "fintrack",
+  "version": "1.0.0",
+  "description": "Smart Personal Finance Tracker with AI Assistance",
+  "keywords": [
+    "fullstack",
+    "mern",
+    "finance"
+  ],
+  "homepage": "https://github.com/Satwik290/FinTrack#readme",
+  "bugs": {
+    "url": "https://github.com/Satwik290/FinTrack/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Satwik290/FinTrack.git"
+  },
+  "license": "ISC",
+  "author": "Satwik Mohanty",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
