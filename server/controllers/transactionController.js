@@ -1,43 +1,57 @@
 const Transaction = require('../models/Transaction');
-const validateTransaction = require('../utils/validateTransaction');
 
+// Add a transaction
 exports.addTransaction = async (req, res) => {
-  const { type, amount, category, note, date } = req.body;
-
-  // Validation
-  const { isValid, errors } = validateTransaction({ type, amount, category });
-  if (!isValid) return res.status(400).json({ errors });
-
   try {
+    const { type, amount, category, date, paymentMethod, notes } = req.body;
+
     const transaction = await Transaction.create({
-      userId: req.user,
+      userId: req.user.id,
       type,
       amount,
       category,
-      note,
-      date
+      date,
+      paymentMethod,
+      notes
     });
+
     res.status(201).json(transaction);
   } catch (err) {
-    res.status(500).json({ message: "Failed to add transaction" });
+    res.status(500).json({ message: "Failed to add transaction", error: err.message });
   }
 };
 
-exports.getTransactions = async (req, res) => {
+// Get summary (monthly or yearly)
+exports.getSummary = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ userId: req.user }).sort({ date: -1 });
-    res.json(transactions);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch transactions" });
-  }
-};
+    const { year, month } = req.query;
+    const match = { userId: req.user.id };
 
-exports.deleteTransaction = async (req, res) => {
-  try {
-    const transaction = await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.user });
-    if (!transaction) return res.status(404).json({ message: "Transaction not found" });
-    res.json({ message: "Transaction deleted" });
+    if (year) {
+      match["$expr"] = { $eq: [{ $year: "$date" }, parseInt(year)] };
+    }
+    if (month) {
+      match["$expr"] = { $and: [
+        { $eq: [{ $year: "$date" }, parseInt(year)] },
+        { $eq: [{ $month: "$date" }, parseInt(month)] }
+      ]};
+    }
+
+    const summary = await Transaction.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$type",
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const income = summary.find(s => s._id === "income")?.total || 0;
+    const expense = summary.find(s => s._id === "expense")?.total || 0;
+
+    res.json({ income, expense, savings: income - expense });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete transaction" });
+    res.status(500).json({ message: "Failed to get summary", error: err.message });
   }
 };
