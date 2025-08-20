@@ -1,6 +1,6 @@
 const Transaction = require('../models/Transaction');
 
-// Add a transaction
+// ➕ Create
 exports.addTransaction = async (req, res) => {
   try {
     const { type, amount, category, date, paymentMethod, notes } = req.body;
@@ -18,6 +18,49 @@ exports.addTransaction = async (req, res) => {
     res.status(201).json(transaction);
   } catch (err) {
     res.status(500).json({ message: "Failed to add transaction", error: err.message });
+  }
+};
+
+// 📊 Read (all for a user)
+exports.getTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({ userId: req.user.id }).sort({ date: -1 });
+    res.json(transactions);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch transactions", error: err.message });
+  }
+};
+
+// ✏️ Update
+exports.updateTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const transaction = await Transaction.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
+      req.body,
+      { new: true }
+    );
+
+    if (!transaction) return res.status(404).json({ message: "Transaction not found" });
+
+    res.json(transaction);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update transaction", error: err.message });
+  }
+};
+
+// ❌ Delete
+exports.deleteTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const transaction = await Transaction.findOneAndDelete({ _id: id, userId: req.user.id });
+    if (!transaction) return res.status(404).json({ message: "Transaction not found" });
+
+    res.json({ message: "Transaction deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete transaction", error: err.message });
   }
 };
 
