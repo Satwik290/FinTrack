@@ -15,5 +15,6 @@ router.post('/', auth, addTransaction);       // Create
 router.get('/', auth, getTransactions);       // Read all
 router.put('/:id', auth, updateTransaction);  // Update
 router.delete('/:id', auth, deleteTransaction); // Delete
+router.get('/:id', auth, getSummary); // summary
 
 module.exports = router;

@@ -5,7 +5,7 @@ const budgetSchema = new mongoose.Schema({
   category: { type: String, required: true },
   limit: { type: Number, required: true },
   type: { type: String, enum: ['monthly', 'yearly'], required: true },
-  month: { type: Number }, // required if monthly
+  month: { type: Number },  // 1-12 (only for monthly budgets)
   year: { type: Number, required: true }
 }, { timestamps: true });
 
