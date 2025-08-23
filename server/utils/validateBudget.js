@@ -1,12 +1,17 @@
 module.exports = function validateBudget({ category, limit, year }) {
   const errors = {};
 
+  // Category validation
   if (!category || category.trim().length < 3) {
     errors.category = "Category must be at least 3 characters long";
   }
+
+  // Limit validation
   if (!limit || isNaN(limit) || limit <= 0) {
     errors.limit = "Limit must be a positive number";
   }
+
+  // Year validation
   if (!year || year < 2000) {
     errors.year = "Year must be valid";
   }

@@ -1,10 +1,14 @@
 const Budget = require('../models/Budget');
 const Transaction = require('../models/Transaction');
+const validateBudget = require('../utils/validateBudget');
 
-// ➕ Create
 exports.addBudget = async (req, res) => {
   try {
     const { category, limit, type, month, year } = req.body;
+
+    // ✅ Run validation before proceeding
+    const { isValid, errors } = validateBudget({ category, limit, year });
+    if (!isValid) return res.status(400).json({ errors });
 
     if (type === "monthly" && !month) {
       return res.status(400).json({ message: "Month is required for monthly budget" });
