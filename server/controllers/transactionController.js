@@ -6,7 +6,7 @@ exports.addTransaction = async (req, res) => {
     const { type, amount, category, date, paymentMethod, notes } = req.body;
 
     const transaction = await Transaction.create({
-      userId: req.user.id,
+      userId: req.user._id,
       type,
       amount,
       category,
