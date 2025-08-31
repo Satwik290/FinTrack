@@ -1,6 +1,29 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import AuthLayout from "../components/AuthLayout"; // Adjust path if needed
+
+// Animation variants for the form container
+const formVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      ease: "easeInOut",
+      when: "beforeChildren",
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+// Animation variants for individual form items
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
 
 function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -19,66 +42,61 @@ function Login() {
       });
       localStorage.setItem("token", res.data.token);
       setMessage("✅ Login Successful!");
-      navigate("/dashboard");
+      setTimeout(() => navigate("/dashboard"), 1000); // Navigate after a short delay
     } catch (err) {
       setMessage("❌ " + (err.response?.data?.message || "Login failed"));
     }
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left side - Illustration */}
-      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-pink-500 to-red-600 items-center justify-center text-white p-12">
-        <div>
-          <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
-          <p className="text-lg opacity-90">
-            Sign in to continue managing your budgets and expenses with FinTrack.
-          </p>
-        </div>
-      </div>
-
-      {/* Right side - Form */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50">
-        <div className="bg-white shadow-xl rounded-2xl p-8 w-96">
-          <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+    <AuthLayout
+      title="Welcome Back!"
+      description="Sign in to continue managing your budgets and expenses with FinTrack."
+      gradient="animated-gradient-pink" // Custom class for animated gradient
+    >
+      <motion.div
+        variants={formVariants}
+        initial="hidden"
+        animate="visible"
+        className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-sm"
+      >
+        <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
+          Login
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <motion.input
+            variants={itemVariants}
+            type="email" name="email" placeholder="Email"
+            value={form.email} onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
+            required
+          />
+          <motion.input
+            variants={itemVariants}
+            type="password" name="password" placeholder="Password"
+            value={form.password} onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
+            required
+          />
+          <motion.button
+            variants={itemVariants}
+            type="submit"
+            className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-semibold transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
+          >
             Login
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-400 outline-none"
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-pink-400 outline-none"
-            />
-            <button
-              type="submit"
-              className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-semibold transition"
-            >
-              Login
-            </button>
-          </form>
-          {message && (
-            <p className="mt-4 text-center text-sm text-red-500">{message}</p>
-          )}
-          <p className="text-center mt-6 text-gray-600">
-            Don’t have an account?{" "}
-            <Link to="/register" className="text-pink-600 font-semibold">
-              Register
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+          </motion.button>
+        </form>
+        {message && (
+          <p className="mt-4 text-center text-sm font-medium text-red-500">{message}</p>
+        )}
+        <p className="text-center mt-6 text-gray-600">
+          Don’t have an account?{" "}
+          <Link to="/register" className="text-pink-600 font-semibold hover:underline">
+            Register
+          </Link>
+        </p>
+      </motion.div>
+    </AuthLayout>
   );
 }
 

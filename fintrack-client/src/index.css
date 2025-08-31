@@ -1,4 +1,43 @@
 @import "tailwindcss";
+/* Add this to your main CSS file, e.g., index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.animated-gradient-pink,
+.animated-gradient-indigo {
+  background-size: 200% 200%;
+  animation: gradient-animation 10s ease infinite;
+}
+
+.animated-gradient-pink {
+  background-image: linear-gradient(
+    -45deg,
+    #ff81ae,
+    #f34a7c,
+    #e73c7e,
+    #d82d6b
+  );
+}
+
+.animated-gradient-indigo {
+  background-image: linear-gradient(
+    -45deg,
+    #8b5cf6,
+    #6366f1,
+    #4f46e5,
+    #6d28d9
+  );
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
