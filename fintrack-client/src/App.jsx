@@ -1,92 +1,92 @@
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-// Import your page components
+// Pages
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 
-// Define animation variants for the page transitions
+// Layout
+import Layout from "./components/Layout.jsx";
+
+// ✅ Page transition animation variants
 const pageVariants = {
   initial: {
     opacity: 0,
-    x: "-100vw", // Start off-screen to the left
+    x: "-100vw", // Slide in from left
     scale: 0.8,
   },
   in: {
     opacity: 1,
-    x: 0, // Animate to the center
+    x: 0,
     scale: 1,
   },
   out: {
     opacity: 0,
-    x: "100vw", // Animate off-screen to the right
+    x: "100vw", // Slide out to right
     scale: 1.2,
   },
 };
 
-// Define the transition properties
 const pageTransition = {
   type: "tween",
   ease: "anticipate",
-  duration: 0.5,
+  duration: 0.6,
 };
 
-// Main App component
+// Motion Wrapper for pages
+const MotionWrapper = ({ children }) => (
+  <motion.div
+    initial="initial"
+    animate="in"
+    exit="out"
+    variants={pageVariants}
+    transition={pageTransition}
+    className="min-h-screen"
+  >
+    {children}
+  </motion.div>
+);
+
 function App() {
   const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
-      {/* The `key` prop is crucial. It tells AnimatePresence when the page has changed.
-        The `location` prop ensures the Routes component updates on navigation. 
-      */}
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to="/login" />} />
+        {/* Default route */}
+        <Route path="/" element={<Navigate to="/register " />} />
 
+        {/* Public routes */}
         <Route
           path="/login"
           element={
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
+            <MotionWrapper>
               <Login />
-            </motion.div>
+            </MotionWrapper>
           }
         />
         <Route
           path="/register"
           element={
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
+            <MotionWrapper>
               <Register />
-            </motion.div>
+            </MotionWrapper>
           }
         />
-        <Route
-          path="/dashboard"
-          element={
-            // You can apply the same animation to the dashboard or a different one!
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <Dashboard />
-            </motion.div>
-          }
-        />
+
+        {/* Protected routes with Layout */}
+        <Route element={<Layout />}>
+          <Route
+            path="/dashboard"
+            element={
+              <MotionWrapper>
+                <Dashboard />
+              </MotionWrapper>
+            }
+          />
+          {/* More protected pages can be added here later (Transactions, Budgets, etc.) */}
+        </Route>
       </Routes>
     </AnimatePresence>
   );

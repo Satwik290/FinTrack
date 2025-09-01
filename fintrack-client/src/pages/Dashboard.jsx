@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { motion } from "framer-motion";
 
 // ✅ Register chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -61,37 +62,54 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <motion.div
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="flex justify-between items-center mb-10"
+      >
         <h1 className="text-4xl font-extrabold text-gray-800">📊 FinTrack Dashboard</h1>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => {
             localStorage.removeItem("token");
             navigate("/login");
           }}
-          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg shadow"
+          className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition"
         >
           Logout
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white shadow-xl rounded-2xl p-6 text-center hover:scale-105 transition">
-          <h2 className="text-lg font-semibold text-gray-500">Income</h2>
-          <p className="text-3xl font-extrabold text-green-600">₹{summary.income}</p>
-        </div>
-        <div className="bg-white shadow-xl rounded-2xl p-6 text-center hover:scale-105 transition">
-          <h2 className="text-lg font-semibold text-gray-500">Expenses</h2>
-          <p className="text-3xl font-extrabold text-red-600">₹{summary.expense}</p>
-        </div>
-        <div className="bg-white shadow-xl rounded-2xl p-6 text-center hover:scale-105 transition">
-          <h2 className="text-lg font-semibold text-gray-500">Savings</h2>
-          <p className="text-3xl font-extrabold text-blue-600">₹{summary.savings}</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {[
+          { title: "Income", value: summary.income, color: "text-green-600" },
+          { title: "Expenses", value: summary.expense, color: "text-red-600" },
+          { title: "Savings", value: summary.savings, color: "text-blue-600" },
+        ].map((card, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.2 }}
+            whileHover={{ scale: 1.05 }}
+            className="bg-white shadow-lg rounded-2xl p-6 text-center"
+          >
+            <h2 className="text-lg font-medium text-gray-500">{card.title}</h2>
+            <p className={`text-3xl font-extrabold ${card.color}`}>₹{card.value}</p>
+          </motion.div>
+        ))}
       </div>
 
       {/* Chart */}
-      <div className="bg-white shadow-xl rounded-2xl p-6 mb-8">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="bg-white shadow-lg rounded-2xl p-6 mb-10"
+      >
         <h2 className="text-xl font-bold mb-4 text-gray-700">Financial Overview</h2>
         <Bar
           data={chartData}
@@ -103,38 +121,46 @@ function Dashboard() {
             },
           }}
         />
-      </div>
+      </motion.div>
 
       {/* Recent Transactions */}
-      <div className="bg-white shadow-xl rounded-2xl p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7 }}
+        className="bg-white shadow-lg rounded-2xl p-6"
+      >
         <h2 className="text-xl font-bold mb-4 text-gray-700">Recent Transactions</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="bg-gray-100 text-gray-600">
-                <th className="p-3 text-left">Date</th>
-                <th className="p-3 text-left">Category</th>
-                <th className="p-3 text-left">Type</th>
-                <th className="p-3 text-left">Amount</th>
+              <tr className="bg-gray-100 text-gray-600 text-left">
+                <th className="p-3">Date</th>
+                <th className="p-3">Category</th>
+                <th className="p-3">Type</th>
+                <th className="p-3">Amount</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((t) => (
-                <tr
+                <motion.tr
                   key={t._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
                   className="border-b hover:bg-gray-50 transition"
                 >
                   <td className="p-3">{new Date(t.date).toLocaleDateString()}</td>
                   <td className="p-3">{t.category}</td>
                   <td
-                    className={`p-3 font-bold ${
+                    className={`p-3 font-semibold ${
                       t.type === "income" ? "text-green-500" : "text-red-500"
                     }`}
                   >
                     {t.type}
                   </td>
-                  <td className="p-3">₹{t.amount}</td>
-                </tr>
+                  <td className="p-3 font-bold">₹{t.amount}</td>
+                </motion.tr>
               ))}
               {transactions.length === 0 && (
                 <tr>
@@ -146,7 +172,7 @@ function Dashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
