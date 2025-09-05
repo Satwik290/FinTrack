@@ -23,7 +23,8 @@
 
 🛠️ Tech Stack
 
-Frontend
+Frontend:
+
 ⚡ React + Vite: Fast and modern UI development.
 
 🎨 TailwindCSS: Utility-first CSS framework for rapid styling.
@@ -32,7 +33,8 @@ Frontend
 
 🧭 React Router: Declarative routing for the application.
 
-Backend
+Backend:
+
 🚀 Node.js + Express: A fast, unopinionated, minimal web framework for Node.js.
 
 🗄️ MongoDB + Mongoose: Flexible NoSQL database and an elegant object data modeling tool.
@@ -41,7 +43,7 @@ Backend
 
 🍪 Cookie & Token Handling: Secure management of authentication tokens.
 
-📂 Project Structure
+📂 Project Structure:
 
 FinTrack/
 │── server/              # Backend
@@ -64,27 +66,36 @@ FinTrack/
 
 🧪 API Endpoints
 
-🔐 Auth
-Method	Route             	Description       
-POST 	/api/auth/register	Register user     
-POST 	/api/auth/login   	Login user       
+🔹 Auth
 
-📝 Transactions
-Method	Route                 	Description             
-POST	/api/transactions     	Add new transaction     
-GET 	/api/transactions     	Get all transactions     
-PUT 	/api/transactions/:id	Update a transaction     
-DELETE	/api/transactions/:id	Delete a transaction     
-GET 	/api/transactions/summary	Get summary (Income/Expense/Savings)
+POST /api/auth/register → Register user
 
-💰 Budgets
-Method	Route             	Description       
-POST 	/api/budgets     	Add a new budget   
-GET 	/api/budgets     	Get all budgets   
-PUT 	/api/budgets/:id	Update a budget   
-DELETE	/api/budgets/:id	Delete a budget   
+POST /api/auth/login → Login user
 
-🚀 Getting Started
+🔹 Transactions
+
+POST /api/transactions → Add transaction
+
+GET /api/transactions → Get all transactions
+
+PUT /api/transactions/:id → Update transaction
+
+DELETE /api/transactions/:id → Delete transaction
+
+GET /api/transactions/summary → Income/Expense/Savings summary
+
+🔹 Budgets
+
+POST /api/budgets → Add budget
+
+GET /api/budgets → Get all budgets
+
+PUT /api/budgets/:id → Update budget
+
+DELETE /api/budgets/:id → Delete budget
+
+🚀 Getting Started:
+
 Follow these steps to get the project up and running locally.
 
 1️⃣ Clone the Repository
@@ -92,6 +103,7 @@ Bash
 
 git clone https://github.com/Satwik290/fintrack.git
 cd fintrack
+
 2️⃣ Backend Setup
 Bash
 
@@ -106,10 +118,14 @@ npm install
 npm run 
 
 🔑 Environment Variables
+
 Create a .env file in the /server directory and add the following:
 PORT=5000
+
 MONGO_URI=your_mongo_connection
+
 JWT_SECRET=your_jwt_secret
+
 CLIENT_URL=http://localhost:5173
 
 📸 Screenshots:
@@ -134,15 +150,21 @@ Notifications
 We welcome contributions! Please follow these steps:
 
 1.Fork the repo 🍴
+
 2.Create a new feature branch (git checkout -b feature/amazing-feature) 🌱
+
 3.Commit your changes (git commit -m 'Add a new feature') ✨
+
 4.Push to the branch (git push origin feature/amazing-feature) 🚀
+
 5.Open a Pull Request!
 
 📜 License
+
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 © 2025 [Satwik Mohanty]
+
 
 
 
