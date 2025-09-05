@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Transactions from "./pages/Transactions.jsx";
 
 // Layout
 import Layout from "./components/Layout.jsx";
@@ -86,6 +87,14 @@ function App() {
             }
           />
           {/* More protected pages can be added here later (Transactions, Budgets, etc.) */}
+          <Route
+            path="/transactions"
+            element={
+              <MotionWrapper>
+                <Transactions />
+              </MotionWrapper>
+            }
+          />
         </Route>
       </Routes>
     </AnimatePresence>
