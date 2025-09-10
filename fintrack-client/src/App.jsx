@@ -6,6 +6,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Transactions from "./pages/Transactions.jsx";
+import Budgets from "./pages/Budgets.jsx";
 
 // Layout
 import Layout from "./components/Layout.jsx";
@@ -92,6 +93,14 @@ function App() {
             element={
               <MotionWrapper>
                 <Transactions />
+              </MotionWrapper>
+            }
+          />
+          <Route
+            path="/budgets"
+            element={
+              <MotionWrapper>
+                <Budgets />
               </MotionWrapper>
             }
           />
