@@ -72,45 +72,61 @@ exports.deleteBudget = async (req, res) => {
   }
 };
 
+
 // 📈 Utilization Summary
 exports.getBudgetUtilization = async (req, res) => {
   try {
     const { year, month } = req.query;
 
-    const budgets = await Budget.find({ userId: req.user.id, year, ...(month && { month }) });
+    // Fetch budgets of the logged-in user
+    const budgets = await Budget.find({
+      userId: req.user.id,
+      year,
+      ...(month && { month }),
+    });
 
-    const results = await Promise.all(budgets.map(async (budget) => {
-      const match = { userId: req.user.id, category: budget.category };
+    // For each budget, calculate spent amount
+    const results = await Promise.all(
+      budgets.map(async (budget) => {
+        const match = { userId: req.user.id, category: budget.category };
 
-      if (budget.type === "yearly") {
-        match.$expr = { $eq: [{ $year: "$date" }, budget.year] };
-      } else if (budget.type === "monthly") {
-        match.$expr = {
-          $and: [
-            { $eq: [{ $year: "$date" }, budget.year] },
-            { $eq: [{ $month: "$date" }, budget.month] }
-          ]
+        if (budget.type === "yearly") {
+          match.$expr = { $eq: [{ $year: "$date" }, budget.year] };
+        } else if (budget.type === "monthly") {
+          match.$expr = {
+            $and: [
+              { $eq: [{ $year: "$date" }, budget.year] },
+              { $eq: [{ $month: "$date" }, budget.month] },
+            ],
+          };
+        }
+
+        // Calculate transactions total
+        const spentAgg = await Transaction.aggregate([
+          { $match: match },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]);
+
+        const spent = spentAgg[0]?.total || 0;
+
+        return {
+          category: budget.category,
+          type: budget.type,
+          year: budget.year,
+          month: budget.month || null,
+          limit: budget.limit,
+          spent,
+          remaining: budget.limit - spent,
+          utilization: ((spent / budget.limit) * 100).toFixed(2) + "%",
         };
-      }
-
-      const spent = await Transaction.aggregate([
-        { $match: match },
-        { $group: { _id: null, total: { $sum: "$amount" } } }
-      ]);
-
-      const totalSpent = spent[0]?.total || 0;
-
-      return {
-        category: budget.category,
-        limit: budget.limit,
-        spent: totalSpent,
-        remaining: budget.limit - totalSpent,
-        utilization: ((totalSpent / budget.limit) * 100).toFixed(2) + "%"
-      };
-    }));
+      })
+    );
 
     res.json(results);
   } catch (err) {
-    res.status(500).json({ message: "Failed to calculate budget utilization", error: err.message });
+    res.status(500).json({
+      message: "Failed to calculate budget utilization",
+      error: err.message,
+    });
   }
 };
