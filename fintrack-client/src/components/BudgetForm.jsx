@@ -14,7 +14,14 @@ function BudgetForm({ onBudgetAdded }) {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const payload = { category, limit, year, type };
+      // ✅ Normalize category before sending
+      const payload = {
+        category: category.trim().toLowerCase(),
+        limit,
+        year,
+        type,
+      };
+
       if (type === "monthly") payload.month = parseInt(month);
 
       const res = await axios.post(
@@ -24,6 +31,8 @@ function BudgetForm({ onBudgetAdded }) {
       );
 
       onBudgetAdded(res.data);
+
+      // reset form
       setCategory("");
       setLimit("");
       setType("yearly");
@@ -63,8 +72,6 @@ function BudgetForm({ onBudgetAdded }) {
           onChange={(e) => setYear(e.target.value)}
           className="p-3 border rounded-lg w-full"
         />
-
-        {/* Budget Type */}
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
@@ -73,8 +80,6 @@ function BudgetForm({ onBudgetAdded }) {
           <option value="yearly">Yearly</option>
           <option value="monthly">Monthly</option>
         </select>
-
-        {/* Month Dropdown if Monthly */}
         {type === "monthly" && (
           <select
             value={month}

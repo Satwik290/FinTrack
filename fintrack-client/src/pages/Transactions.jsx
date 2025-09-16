@@ -1,18 +1,19 @@
+// src/pages/Transactions.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-function Transactions() {
+function Transactions({ onTransactionsChanged }) {
   const [transactions, setTransactions] = useState([]);
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
     category: "",
     date: "",
-    paymentMethod: "",
+    paymentMethod: "cash",
     notes: "",
   });
-  const [editing, setEditing] = useState(null); // store transaction being edited
+  const [editing, setEditing] = useState(null);
   const navigate = useNavigate();
 
   // ✅ Fetch transactions
@@ -26,7 +27,7 @@ function Transactions() {
       });
       setTransactions(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Failed to fetch transactions:", err);
     }
   };
 
@@ -34,7 +35,7 @@ function Transactions() {
     fetchData();
   }, [navigate]);
 
-  // ✅ Handle form input
+  // ✅ Handle input change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -45,57 +46,66 @@ function Transactions() {
     try {
       const token = localStorage.getItem("token");
 
+      // 🔹 Normalize category for budget tracking
+      const payload = {
+        ...form,
+        category: form.category.trim().toLowerCase(),
+      };
+
       if (editing) {
-        // Update
         await axios.put(
           `http://localhost:5000/api/transactions/${editing}`,
-          form,
+          payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setEditing(null);
       } else {
-        // Add new
-        await axios.post("http://localhost:5000/api/transactions", form, {
+        await axios.post("http://localhost:5000/api/transactions", payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
 
+      // Reset form
       setForm({
         type: "expense",
         amount: "",
         category: "",
         date: "",
-        paymentMethod: "",
+        paymentMethod: "cash",
         notes: "",
       });
 
       fetchData();
+      onTransactionsChanged?.(); // 🔄 Trigger budget refresh
     } catch (err) {
-      console.error(err);
+      console.error("❌ Failed to save transaction:", err);
     }
   };
 
   // ✅ Delete transaction
   const handleDelete = async (id) => {
+    if (!window.confirm("Delete this transaction?")) return;
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`http://localhost:5000/api/transactions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setTransactions(transactions.filter((t) => t._id !== id));
+      onTransactionsChanged?.(); // 🔄 Trigger budget refresh
     } catch (err) {
-      console.error(err);
+      console.error("❌ Failed to delete transaction:", err);
     }
   };
 
-  // ✅ Open edit modal
+  // ✅ Edit transaction
   const handleEdit = (transaction) => {
     setEditing(transaction._id);
     setForm({
       type: transaction.type,
       amount: transaction.amount,
       category: transaction.category,
-      date: transaction.date.split("T")[0], // format date
+      date: transaction.date.split("T")[0], // yyyy-mm-dd
       paymentMethod: transaction.paymentMethod,
       notes: transaction.notes,
     });
@@ -110,6 +120,7 @@ function Transactions() {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow mb-6"
       >
+        {/* Type */}
         <select
           name="type"
           value={form.type}
@@ -119,24 +130,30 @@ function Transactions() {
           <option value="income">Income</option>
           <option value="expense">Expense</option>
         </select>
+
+        {/* Amount */}
         <input
           type="number"
           name="amount"
-          placeholder="Amount"
+          placeholder="Amount (₹)"
           value={form.amount}
           onChange={handleChange}
           className="border p-2 rounded"
           required
         />
+
+        {/* Category */}
         <input
           type="text"
           name="category"
-          placeholder="Category"
+          placeholder="Category (e.g. food, rent)"
           value={form.category}
           onChange={handleChange}
-          className="border p-2 rounded"
+          className="border p-2 rounded capitalize"
           required
         />
+
+        {/* Date */}
         <input
           type="date"
           name="date"
@@ -145,26 +162,37 @@ function Transactions() {
           className="border p-2 rounded"
           required
         />
-        <input
-          type="text"
+
+        {/* Payment Method */}
+        <select
           name="paymentMethod"
-          placeholder="Payment Method"
           value={form.paymentMethod}
           onChange={handleChange}
           className="border p-2 rounded"
-        />
+        >
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="upi">UPI</option>
+          <option value="other">Other</option>
+        </select>
+
+        {/* Notes */}
         <input
           type="text"
           name="notes"
-          placeholder="Notes"
+          placeholder="Notes (optional)"
           value={form.notes}
           onChange={handleChange}
           className="border p-2 rounded col-span-2"
         />
+
+        {/* Submit */}
         <button
           type="submit"
           className={`${
-            editing ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
+            editing
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-blue-600 hover:bg-blue-700"
           } text-white px-4 py-2 rounded col-span-2`}
         >
           {editing ? "Update Transaction" : "Add Transaction"}
@@ -189,7 +217,7 @@ function Transactions() {
             {transactions.map((t) => (
               <tr key={t._id} className="border-b hover:bg-gray-50 transition">
                 <td className="p-3">{new Date(t.date).toLocaleDateString()}</td>
-                <td className="p-3">{t.category}</td>
+                <td className="p-3 capitalize">{t.category}</td>
                 <td
                   className={`p-3 font-bold ${
                     t.type === "income" ? "text-green-500" : "text-red-500"

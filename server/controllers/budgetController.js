@@ -72,36 +72,32 @@ exports.deleteBudget = async (req, res) => {
   }
 };
 
-
 // 📈 Utilization Summary
 exports.getBudgetUtilization = async (req, res) => {
   try {
     const { year, month } = req.query;
 
-    // Fetch budgets of the logged-in user
-    const budgets = await Budget.find({
-      userId: req.user.id,
-      year,
-      ...(month && { month }),
-    });
+    const budgets = await Budget.find({ userId: req.user.id, year, ...(month && { month }) });
 
-    // For each budget, calculate spent amount
     const results = await Promise.all(
       budgets.map(async (budget) => {
-        const match = { userId: req.user.id, category: budget.category };
+        const match = {
+          userId: req.user.id,
+          category: budget.category.toLowerCase(), // normalize
+          type: "expense", // ✅ only count expenses
+        };
 
         if (budget.type === "yearly") {
-          match.$expr = { $eq: [{ $year: "$date" }, budget.year] };
-        } else if (budget.type === "monthly") {
-          match.$expr = {
-            $and: [
-              { $eq: [{ $year: "$date" }, budget.year] },
-              { $eq: [{ $month: "$date" }, budget.month] },
-            ],
+          match.date = {
+            $gte: new Date(`${budget.year}-01-01`),
+            $lte: new Date(`${budget.year}-12-31`),
           };
+        } else if (budget.type === "monthly") {
+          const start = new Date(budget.year, budget.month - 1, 1);
+          const end = new Date(budget.year, budget.month, 0, 23, 59, 59);
+          match.date = { $gte: start, $lte: end };
         }
 
-        // Calculate transactions total
         const spentAgg = await Transaction.aggregate([
           { $match: match },
           { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -111,9 +107,6 @@ exports.getBudgetUtilization = async (req, res) => {
 
         return {
           category: budget.category,
-          type: budget.type,
-          year: budget.year,
-          month: budget.month || null,
           limit: budget.limit,
           spent,
           remaining: budget.limit - spent,
@@ -124,9 +117,6 @@ exports.getBudgetUtilization = async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    res.status(500).json({
-      message: "Failed to calculate budget utilization",
-      error: err.message,
-    });
+    res.status(500).json({ message: "Failed to calculate budget utilization", error: err.message });
   }
 };

@@ -12,6 +12,10 @@ function Budgets() {
 
       <BudgetForm onBudgetAdded={() => setRefresh(refresh + 1)} />
       <BudgetTable refresh={refresh} />
+
+      {/* ✅ Add transaction trigger for budgets */}
+      {/* Example if you want transactions inside this page */}
+      {/* <Transactions onTransactionsChanged={() => setRefresh(refresh + 1)} /> */}
     </div>
   );
 }

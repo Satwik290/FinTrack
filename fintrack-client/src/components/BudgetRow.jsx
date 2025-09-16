@@ -1,5 +1,4 @@
-// src/components/BudgetRow.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 function BudgetRow({ budget, onUpdated, onDeleted }) {
@@ -7,8 +6,42 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
   const [category, setCategory] = useState(budget.category);
   const [limit, setLimit] = useState(budget.limit);
 
-  const spent = Math.floor(Math.random() * budget.limit); // TODO: Replace with real data
-  const percent = Math.min((spent / budget.limit) * 100, 100);
+  // Utilization state
+  const [spent, setSpent] = useState(0);
+  const [remaining, setRemaining] = useState(limit);
+  const [percent, setPercent] = useState(0);
+
+  // ✅ Fetch utilization data from API
+  const fetchUtilization = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const res = await axios.get(
+        `http://localhost:5000/api/budgets/utilization?year=${budget.year}${
+          budget.type === "monthly" ? `&month=${budget.month}` : ""
+        }`,
+        { headers }
+      );
+
+      const util = res.data.find(
+        (u) => u.category.toLowerCase() === budget.category.toLowerCase()
+      );
+
+      if (util) {
+        setSpent(util.spent);
+        setRemaining(util.remaining);
+        setPercent(Math.min((util.spent / util.limit) * 100, 100));
+      }
+    } catch (err) {
+      console.error("Failed to fetch budget utilization", err);
+    }
+  };
+
+  // ✅ Fetch utilization whenever budget or limit changes
+  useEffect(() => {
+    fetchUtilization();
+  }, [budget]);
 
   const handleUpdate = async () => {
     try {
@@ -23,6 +56,7 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
 
       onUpdated(res.data);
       setIsEditing(false);
+      fetchUtilization(); // 🔄 refresh after update
     } catch (err) {
       console.error("Failed to update budget", err.response?.data || err.message);
     }
@@ -34,10 +68,9 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      await axios.delete(
-        `http://localhost:5000/api/budgets/${budget._id}`,
-        { headers }
-      );
+      await axios.delete(`http://localhost:5000/api/budgets/${budget._id}`, {
+        headers,
+      });
 
       onDeleted(budget._id);
     } catch (err) {
@@ -84,6 +117,12 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
             style={{ width: `${percent}%` }}
           ></div>
         </div>
+        <p className="text-xs text-gray-500 mt-1">
+          {percent.toFixed(2)}% used (
+          {remaining >= 0
+            ? `₹${remaining} left`
+            : `Over by ₹${Math.abs(remaining)}`} )
+        </p>
       </td>
       <td className="p-3">
         {isEditing ? (
