@@ -46,10 +46,11 @@ function Transactions({ onTransactionsChanged }) {
     try {
       const token = localStorage.getItem("token");
 
-      // 🔹 Normalize category for budget tracking
+      // 🔹 FIXED: Properly normalize category for budget tracking
       const payload = {
         ...form,
-        category: form.category.trim().toLowerCase(),
+        category: form.category.trim().toLowerCase(), // Ensure lowercase and trimmed
+        amount: parseFloat(form.amount), // Ensure number format
       };
 
       if (editing) {
@@ -76,9 +77,14 @@ function Transactions({ onTransactionsChanged }) {
       });
 
       fetchData();
-      onTransactionsChanged?.(); // 🔄 Trigger budget refresh
+      
+      // 🔄 FIXED: Trigger budget refresh after any transaction change
+      if (onTransactionsChanged) {
+        onTransactionsChanged();
+      }
     } catch (err) {
       console.error("❌ Failed to save transaction:", err);
+      alert("Failed to save transaction. Please try again.");
     }
   };
 
@@ -92,9 +98,14 @@ function Transactions({ onTransactionsChanged }) {
       });
 
       setTransactions(transactions.filter((t) => t._id !== id));
-      onTransactionsChanged?.(); // 🔄 Trigger budget refresh
+      
+      // 🔄 FIXED: Trigger budget refresh after delete
+      if (onTransactionsChanged) {
+        onTransactionsChanged();
+      }
     } catch (err) {
       console.error("❌ Failed to delete transaction:", err);
+      alert("Failed to delete transaction. Please try again.");
     }
   };
 
@@ -134,6 +145,7 @@ function Transactions({ onTransactionsChanged }) {
         {/* Amount */}
         <input
           type="number"
+          step="0.01"
           name="amount"
           placeholder="Amount (₹)"
           value={form.amount}
@@ -149,7 +161,7 @@ function Transactions({ onTransactionsChanged }) {
           placeholder="Category (e.g. food, rent)"
           value={form.category}
           onChange={handleChange}
-          className="border p-2 rounded capitalize"
+          className="border p-2 rounded"
           required
         />
 
@@ -197,6 +209,26 @@ function Transactions({ onTransactionsChanged }) {
         >
           {editing ? "Update Transaction" : "Add Transaction"}
         </button>
+        
+        {editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(null);
+              setForm({
+                type: "expense",
+                amount: "",
+                category: "",
+                date: "",
+                paymentMethod: "cash",
+                notes: "",
+              });
+            }}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded col-span-2"
+          >
+            Cancel Edit
+          </button>
+        )}
       </form>
 
       {/* Transactions Table */}
