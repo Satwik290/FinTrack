@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { categories } from "../utils/categories";
 
 function Transactions({ onTransactionsChanged }) {
   const [transactions, setTransactions] = useState([]);
@@ -46,11 +47,10 @@ function Transactions({ onTransactionsChanged }) {
     try {
       const token = localStorage.getItem("token");
 
-      // 🔹 FIXED: Properly normalize category for budget tracking
       const payload = {
         ...form,
-        category: form.category.trim().toLowerCase(), // Ensure lowercase and trimmed
-        amount: parseFloat(form.amount), // Ensure number format
+        category: form.category, // always from dropdown
+        amount: parseFloat(form.amount),
       };
 
       if (editing) {
@@ -77,11 +77,7 @@ function Transactions({ onTransactionsChanged }) {
       });
 
       fetchData();
-      
-      // 🔄 FIXED: Trigger budget refresh after any transaction change
-      if (onTransactionsChanged) {
-        onTransactionsChanged();
-      }
+      if (onTransactionsChanged) onTransactionsChanged();
     } catch (err) {
       console.error("❌ Failed to save transaction:", err);
       alert("Failed to save transaction. Please try again.");
@@ -98,11 +94,7 @@ function Transactions({ onTransactionsChanged }) {
       });
 
       setTransactions(transactions.filter((t) => t._id !== id));
-      
-      // 🔄 FIXED: Trigger budget refresh after delete
-      if (onTransactionsChanged) {
-        onTransactionsChanged();
-      }
+      if (onTransactionsChanged) onTransactionsChanged();
     } catch (err) {
       console.error("❌ Failed to delete transaction:", err);
       alert("Failed to delete transaction. Please try again.");
@@ -116,7 +108,7 @@ function Transactions({ onTransactionsChanged }) {
       type: transaction.type,
       amount: transaction.amount,
       category: transaction.category,
-      date: transaction.date.split("T")[0], // yyyy-mm-dd
+      date: transaction.date.split("T")[0],
       paymentMethod: transaction.paymentMethod,
       notes: transaction.notes,
     });
@@ -131,7 +123,6 @@ function Transactions({ onTransactionsChanged }) {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow mb-6"
       >
-        {/* Type */}
         <select
           name="type"
           value={form.type}
@@ -142,7 +133,6 @@ function Transactions({ onTransactionsChanged }) {
           <option value="expense">Expense</option>
         </select>
 
-        {/* Amount */}
         <input
           type="number"
           step="0.01"
@@ -154,18 +144,22 @@ function Transactions({ onTransactionsChanged }) {
           required
         />
 
-        {/* Category */}
-        <input
-          type="text"
+        {/* 🔽 Category Dropdown */}
+        <select
           name="category"
-          placeholder="Category (e.g. food, rent)"
           value={form.category}
           onChange={handleChange}
           className="border p-2 rounded"
           required
-        />
+        >
+          <option value="">Select Category</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </option>
+          ))}
+        </select>
 
-        {/* Date */}
         <input
           type="date"
           name="date"
@@ -175,7 +169,6 @@ function Transactions({ onTransactionsChanged }) {
           required
         />
 
-        {/* Payment Method */}
         <select
           name="paymentMethod"
           value={form.paymentMethod}
@@ -188,7 +181,6 @@ function Transactions({ onTransactionsChanged }) {
           <option value="other">Other</option>
         </select>
 
-        {/* Notes */}
         <input
           type="text"
           name="notes"
@@ -198,7 +190,6 @@ function Transactions({ onTransactionsChanged }) {
           className="border p-2 rounded col-span-2"
         />
 
-        {/* Submit */}
         <button
           type="submit"
           className={`${
@@ -209,26 +200,6 @@ function Transactions({ onTransactionsChanged }) {
         >
           {editing ? "Update Transaction" : "Add Transaction"}
         </button>
-        
-        {editing && (
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setForm({
-                type: "expense",
-                amount: "",
-                category: "",
-                date: "",
-                paymentMethod: "cash",
-                notes: "",
-              });
-            }}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded col-span-2"
-          >
-            Cancel Edit
-          </button>
-        )}
       </form>
 
       {/* Transactions Table */}

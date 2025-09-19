@@ -1,73 +1,52 @@
+// src/components/BudgetRow.jsx
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { categories } from "../utils/categories";
 
 function BudgetRow({ budget, onUpdated, onDeleted }) {
   const [isEditing, setIsEditing] = useState(false);
   const [category, setCategory] = useState(budget.category);
   const [limit, setLimit] = useState(budget.limit);
-
-  // Utilization state
   const [spent, setSpent] = useState(0);
   const [remaining, setRemaining] = useState(budget.limit);
   const [percent, setPercent] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  // ✅ FIXED: Fetch utilization data from API
-  const fetchUtilization = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const params = new URLSearchParams({
-        year: budget.year.toString(),
-      });
-      
-      if (budget.type === "monthly" && budget.month) {
-        params.append('month', budget.month.toString());
-      }
-
-      console.log(`🔍 Fetching utilization for budget: ${budget.category} (${budget.type})`);
-      
-      const res = await axios.get(
-        `http://localhost:5000/api/budgets/utilization?${params.toString()}`,
-        { headers }
-      );
-
-      console.log(`📊 Utilization response:`, res.data);
-
-      // FIXED: Find the matching budget by category (both should be lowercase)
-      const util = res.data.find(
-        (u) => u.category.toLowerCase() === budget.category.toLowerCase()
-      );
-
-      console.log(`🎯 Found matching utilization:`, util);
-
-      if (util) {
-        setSpent(util.spent);
-        setRemaining(util.remaining);
-        setPercent(Math.min((util.spent / util.limit) * 100, 100));
-      } else {
-        // Reset to defaults if no utilization found
-        setSpent(0);
-        setRemaining(budget.limit);
-        setPercent(0);
-      }
-    } catch (err) {
-      console.error("❌ Failed to fetch budget utilization", err);
-      // Reset to defaults on error
-      setSpent(0);
-      setRemaining(budget.limit);
-      setPercent(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ Fetch utilization whenever budget changes
   useEffect(() => {
+    const fetchUtilization = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const params = new URLSearchParams({ year: budget.year.toString() });
+        if (budget.type === "monthly" && budget.month) {
+          params.append("month", budget.month.toString());
+        }
+
+        const res = await axios.get(
+          `http://localhost:5000/api/budgets/utilization?${params.toString()}`,
+          { headers }
+        );
+
+        const util = res.data.find(
+          (u) => u.category.toLowerCase() === budget.category.toLowerCase()
+        );
+
+        if (util) {
+          setSpent(util.spent);
+          setRemaining(util.remaining);
+          setPercent(Math.min((util.spent / util.limit) * 100, 100));
+        } else {
+          setSpent(0);
+          setRemaining(budget.limit);
+          setPercent(0);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch utilization", err);
+      }
+    };
+
     fetchUtilization();
-  }, [budget, budget._id]);
+  }, [budget]);
 
   const handleUpdate = async () => {
     try {
@@ -76,24 +55,19 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
 
       const res = await axios.put(
         `http://localhost:5000/api/budgets/${budget._id}`,
-        { 
-          category: category.trim().toLowerCase(), // Ensure normalization
-          limit: parseFloat(limit) 
-        },
+        { category, limit: parseFloat(limit) },
         { headers }
       );
 
       onUpdated(res.data);
       setIsEditing(false);
-      // Fetch utilization will be triggered by useEffect when budget prop changes
     } catch (err) {
-      console.error("❌ Failed to update budget", err.response?.data || err.message);
-      alert("Failed to update budget. Please try again.");
+      console.error("❌ Failed to update budget", err);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this budget?")) return;
+    if (!window.confirm("Are you sure?")) return;
     try {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
@@ -104,8 +78,7 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
 
       onDeleted(budget._id);
     } catch (err) {
-      console.error("❌ Failed to delete budget", err.response?.data || err.message);
-      alert("Failed to delete budget. Please try again.");
+      console.error("❌ Failed to delete budget", err);
     }
   };
 
@@ -113,12 +86,17 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
     <tr className="border-b hover:bg-gray-50">
       <td className="p-3">
         {isEditing ? (
-          <input
+          <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="p-2 border rounded w-full"
-            placeholder="Category name"
-          />
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </option>
+            ))}
+          </select>
         ) : (
           <span className="capitalize">{budget.category}</span>
         )}
@@ -131,85 +109,69 @@ function BudgetRow({ budget, onUpdated, onDeleted }) {
             value={limit}
             onChange={(e) => setLimit(e.target.value)}
             className="p-2 border rounded w-full"
-            placeholder="Budget limit"
           />
         ) : (
           `₹${budget.limit}`
         )}
       </td>
-      <td className="p-3">
-        {loading ? (
-          <span className="text-gray-400">Loading...</span>
-        ) : (
-          `₹${spent}`
-        )}
-      </td>
+      <td className="p-3">₹{spent}</td>
       <td className="p-3 w-64">
-        {loading ? (
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div className="h-2.5 bg-gray-300 rounded-full animate-pulse"></div>
-          </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className={`h-2.5 rounded-full ${
+              percent < 70
+                ? "bg-green-500"
+                : percent < 100
+                ? "bg-yellow-500"
+                : "bg-red-500"
+            }`}
+            style={{ width: `${percent}%` }}
+          ></div>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          {percent.toFixed(1)}% used (
+          {remaining >= 0
+            ? `₹${remaining.toFixed(2)} left`
+            : `Over by ₹${Math.abs(remaining).toFixed(2)}`}
+          )
+        </p>
+      </td>
+      <td className="p-3">
+        {isEditing ? (
+          <>
+            <button
+              onClick={handleUpdate}
+              className="px-2 py-1 bg-green-500 text-white rounded mr-2"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setCategory(budget.category);
+                setLimit(budget.limit);
+              }}
+              className="px-2 py-1 bg-gray-400 text-white rounded"
+            >
+              Cancel
+            </button>
+          </>
         ) : (
           <>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className={`h-2.5 rounded-full transition-all duration-300 ${
-                  percent < 70
-                    ? "bg-green-500"
-                    : percent < 100
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-                style={{ width: `${Math.min(percent, 100)}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {percent.toFixed(1)}% used (
-              {remaining >= 0
-                ? `₹${remaining.toFixed(2)} left`
-                : `Over by ₹${Math.abs(remaining).toFixed(2)}`})
-            </p>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-2 py-1 bg-blue-500 text-white rounded mr-2"
+            >
+              Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-2 py-1 bg-red-500 text-white rounded"
+            >
+              Delete
+            </button>
           </>
         )}
-      </td>
-      <td className="p-3">
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <button
-                onClick={handleUpdate}
-                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setCategory(budget.category);
-                  setLimit(budget.limit);
-                }}
-                className="px-3 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded text-sm"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
-              >
-                Delete
-              </button>
-            </>
-          )}
-        </div>
       </td>
     </tr>
   );

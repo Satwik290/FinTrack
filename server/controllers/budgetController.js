@@ -79,103 +79,65 @@ exports.deleteBudget = async (req, res) => {
   }
 };
 
-// 📈 FIXED: Utilization Summary
+// 📈 Utilization Summary
 exports.getBudgetUtilization = async (req, res) => {
   try {
     const { year, month } = req.query;
-    const currentYear = year || new Date().getFullYear();
-    const currentMonth = month ? parseInt(month) : undefined;
 
-    console.log(`🔍 Fetching budget utilization for year: ${currentYear}, month: ${currentMonth}`);
+    // fetch all budgets for the user
+    const budgets = await Budget.find({
+      userId: req.user.id,
+      year,
+      ...(month && { month }),
+    });
 
-    // Get all budgets for the user
-    const budgetQuery = { 
-      userId: req.user.id, 
-      year: parseInt(currentYear)
-    };
-    
-    if (currentMonth) {
-      budgetQuery.month = currentMonth;
-    }
-
-    const budgets = await Budget.find(budgetQuery);
-    console.log(`📊 Found ${budgets.length} budgets:`, budgets.map(b => ({ category: b.category, limit: b.limit, type: b.type })));
-
+    // calculate spent for each budget
     const results = await Promise.all(
       budgets.map(async (budget) => {
-        console.log(`\n🔍 Processing budget: ${budget.category} (${budget.type})`);
-        
         const match = {
           userId: req.user.id,
-          category: budget.category, // Both should be lowercase now
-          type: "expense", // ✅ only count expenses
+          category: budget.category.toLowerCase(), // normalize
+          type: "expense", // ✅ count only expense transactions
         };
 
-        // Set date range based on budget type
         if (budget.type === "yearly") {
-          match.date = {
-            $gte: new Date(`${budget.year}-01-01`),
-            $lte: new Date(`${budget.year}-12-31T23:59:59`),
-          };
+          match.$expr = { $eq: [{ $year: "$date" }, budget.year] };
         } else if (budget.type === "monthly") {
-          const start = new Date(budget.year, budget.month - 1, 1);
-          const end = new Date(budget.year, budget.month, 0, 23, 59, 59);
-          match.date = { $gte: start, $lte: end };
+          match.$expr = {
+            $and: [
+              { $eq: [{ $year: "$date" }, budget.year] },
+              { $eq: [{ $month: "$date" }, budget.month] },
+            ],
+          };
         }
 
-        console.log(`📅 Date range:`, match.date);
-        console.log(`🔍 Transaction query:`, match);
-
-        // Find matching transactions for debugging
-        const matchingTransactions = await Transaction.find(match);
-        console.log(`💰 Found ${matchingTransactions.length} matching transactions:`, 
-          matchingTransactions.map(t => ({ 
-            category: t.category, 
-            amount: t.amount, 
-            date: t.date,
-            type: t.type 
-          }))
-        );
-
-        // FIXED: Handle amount data type conversion in aggregation
         const spentAgg = await Transaction.aggregate([
           { $match: match },
-          { 
-            $group: { 
-              _id: null, 
-              total: { 
-                $sum: { 
-                  $toDouble: "$amount"  // Convert to number if it's stored as string
-                } 
-              },
-              count: { $sum: 1 }  // Count transactions for debugging
-            } 
-          },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
         ]);
 
-        const spent = spentAgg[0]?.total || 0;
-        const transactionCount = spentAgg[0]?.count || 0;
-        
-        console.log(`💸 Aggregation result:`, spentAgg[0]);
-        console.log(`💸 Total spent: ₹${spent} out of ₹${budget.limit} (${transactionCount} transactions)`);
+        const totalSpent = spentAgg[0]?.total || 0;
 
         return {
           category: budget.category,
           limit: budget.limit,
-          spent,
-          remaining: budget.limit - spent,
-          utilization: ((spent / budget.limit) * 100).toFixed(2) + "%",
-          budgetType: budget.type,
-          budgetYear: budget.year,
-          budgetMonth: budget.month
+          spent: totalSpent,
+          remaining: budget.limit - totalSpent,
+          utilization:
+            budget.limit > 0
+              ? ((totalSpent / budget.limit) * 100).toFixed(2) + "%"
+              : "0%",
         };
       })
     );
 
-    console.log(`📋 Final results:`, results);
     res.json(results);
   } catch (err) {
-    console.error("❌ Budget utilization error:", err);
-    res.status(500).json({ message: "Failed to calculate budget utilization", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Failed to calculate budget utilization",
+        error: err.message,
+      });
   }
 };
