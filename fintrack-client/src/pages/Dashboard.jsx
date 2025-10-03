@@ -1,17 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import DashboardCharts from "../components/DashboardCharts"; // 🔹 Import
 
 function Dashboard() {
   const [summary, setSummary] = useState({ income: 0, expense: 0, savings: 0 });
@@ -40,21 +29,8 @@ function Dashboard() {
     fetchData();
   }, []);
 
-  const chartData = {
-    labels: ["Income", "Expenses", "Savings"],
-    datasets: [
-      {
-        label: "Amount (₹)",
-        data: [summary.income, summary.expense, summary.savings],
-        backgroundColor: ["#22c55e", "#ef4444", "#3b82f6"],
-        borderRadius: 10,
-      },
-    ],
-  };
-
   return (
     <div className="p-6">
-      {/* Page Heading */}
       <h1 className="text-3xl font-bold text-gray-800 mb-8">📊 FinTrack Dashboard</h1>
 
       {/* Summary Cards */}
@@ -73,11 +49,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="bg-white shadow-md rounded-xl p-6 mb-10">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Financial Overview</h2>
-        <Bar data={chartData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
-      </div>
+      {/* 🔹 Reusable Charts Component */}
+      <DashboardCharts summary={summary} />
 
       {/* Recent Transactions */}
       <div className="bg-white shadow-md rounded-xl p-6">
