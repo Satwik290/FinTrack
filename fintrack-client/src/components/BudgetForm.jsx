@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
+
 function BudgetForm({ onBudgetAdded }) {
   const [category, setCategory] = useState("");
   const [limit, setLimit] = useState("");
