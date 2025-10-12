@@ -77,35 +77,6 @@ Architecture Diagram:
 ![Learnify Backend Architecture](./assets/diagram-export-9-7-2025-9_36_03-PM.png)
 
 
-🧪 API Endpoints
-
-🔹 Auth
-
-POST /api/auth/register → Register user
-
-POST /api/auth/login → Login user
-
-🔹 Transactions
-
-POST /api/transactions → Add transaction
-
-GET /api/transactions → Get all transactions
-
-PUT /api/transactions/:id → Update transaction
-
-DELETE /api/transactions/:id → Delete transaction
-
-GET /api/transactions/summary → Income/Expense/Savings summary
-
-🔹 Budgets
-
-POST /api/budgets → Add budget
-
-GET /api/budgets → Get all budgets
-
-PUT /api/budgets/:id → Update budget
-
-DELETE /api/budgets/:id → Delete budget
 
 🚀 Getting Started:
 
@@ -177,6 +148,7 @@ We welcome contributions! Please follow these steps:
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 © 2025 [Satwik Mohanty]
+
 
 
 
