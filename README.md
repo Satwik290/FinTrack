@@ -119,7 +119,7 @@ Registration
 Login
 ![Learnify Backend Architecture](./assets/login%20page.png)
 Dashboard
-![Learnify Backend Architecture](./assets/Dashboard.png)
+![Learnify Backend Architecture](./assets/dashboard2.0.png)
 Transactions
 ![Learnify Backend Architecture](./assets/Transaction.png)
 
