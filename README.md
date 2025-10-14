@@ -1,5 +1,5 @@
-﻿﻿# 💰 FinTrack – Personal Finance Tracker with AI Assistance
 
+﻿<h1 align="center">💸 FinTrack – Personal Finance Tracker With AI Assitance</h1>
 <p align="center">
   <img src="./assets/logo.png" alt="FinTrack Logo" width="200"/>
 </p>
@@ -742,4 +742,5 @@ copies of the Software...
 
 <p align="center">
   ⭐ Star this repo if you find it helpful!
+
 </p>
