@@ -81,8 +81,8 @@ function App() {
           path="/"
           element={
             <MotionWrapper>
-              <HomePage />
-              {/* <Login /> */}
+              {/* <HomePage /> */}
+              <Login />
             </MotionWrapper>
           }
         />
