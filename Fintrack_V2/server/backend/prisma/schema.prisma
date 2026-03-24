@@ -1,11 +1,9 @@
 generator client {
   provider = "prisma-client-js"
-  // REMOVE moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
-  // Ensure no 'url' line is here if you're using prisma.config.ts
 }
 
 model User {
@@ -13,4 +11,18 @@ model User {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
+
+  // This line is required to complete the relationship
+  transactions Transaction[]
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  amount    Float
+  category  String
+  note      String?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }

@@ -1,0 +1,2 @@
+﻿src/common/filters/all-exceptions.filter.ts(27,16): error TS2571: Object is of type 'unknown'.
+src/common/filters/all-exceptions.filter.ts(34,7): error TS2698: Spread types may only be created from object types.

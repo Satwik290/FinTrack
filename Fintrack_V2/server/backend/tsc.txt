@@ -1,0 +1,1 @@
+﻿src/common/filters/all-exceptions.filter.ts(27,16): error TS2571: Object is of type 'unknown'.

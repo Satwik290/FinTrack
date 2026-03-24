@@ -5,6 +5,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
+import { TransactionsModule } from './modules/transactions/transactions.module';
+import { GqlArgumentsHost } from '@nestjs/graphql';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { JwtModule } from '@nestjs/jwt';
       secret: 'secret123',
       signOptions: { expiresIn: '1d' },
     }),
+    TransactionsModule,
+    GqlArgumentsHost,
   ],
   controllers: [AppController],
   providers: [AppService],
