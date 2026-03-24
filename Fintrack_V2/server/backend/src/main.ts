@@ -22,8 +22,9 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
-
+  SwaggerModule.setup('docs', app, document, {
+    useGlobalPrefix: true, // This allows access at /docs instead of /api/docs
+  });
   await app.listen(3000);
 }
 

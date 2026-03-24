@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@apollo/server": "^5.4.0",
+    "@fastify/static": "^9.0.0",
     "@nestjs/apollo": "^13.2.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
@@ -39,7 +40,7 @@
     "graphql": "^16.13.1",
     "nestjs-zod": "^5.2.1",
     "pg": "^8.20.0",
-    "prisma": "^7.5.0",
+    "prisma": "^6.19.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
@@ -48,8 +49,8 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@nestjs/cli": "^11.0.0",
-    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/cli": "^7.6.0",
+    "@nestjs/schematics": "^7.3.1",
     "@nestjs/testing": "^11.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
