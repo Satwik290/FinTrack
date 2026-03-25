@@ -1,11 +1,9 @@
 generator client {
   provider   = "prisma-client-js"
-  engineType = "library"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -19,14 +17,16 @@ model User {
 }
 
 model Transaction {
-  id        String   @id @default(uuid())
-  amount    Float
-  category  String
-  note      String?
-  createdAt DateTime @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  id          String   @id @default(uuid())
+  amount      Float
+  type        String   // e.g., 'INCOME' or 'EXPENSE'
+  category    String   // e.g., 'FOOD', 'RENT'
+  description String?
+  createdAt   DateTime @default(now())
+  
+  // Foreign key relation to the User
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Budget {

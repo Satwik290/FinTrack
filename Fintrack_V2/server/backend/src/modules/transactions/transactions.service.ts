@@ -12,7 +12,6 @@ export class TransactionsService {
     userId: string,
     data: CreateTransactionDto,
   ): Promise<Transaction> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await this.prisma.transaction.create({
       data: {
         ...data,
@@ -22,7 +21,6 @@ export class TransactionsService {
   }
 
   async findAll(userId: string): Promise<Transaction[]> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await this.prisma.transaction.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -30,11 +28,9 @@ export class TransactionsService {
   }
 
   async findOne(userId: string, id: string): Promise<Transaction> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const transaction: Transaction | null =
-      await this.prisma.transaction.findFirst({
-        where: { id, userId },
-      });
+    const transaction = await this.prisma.transaction.findFirst({
+      where: { id, userId },
+    });
 
     if (!transaction) {
       throw new NotFoundException(`Transaction with ID ${id} not found.`);
@@ -50,7 +46,6 @@ export class TransactionsService {
   ): Promise<Transaction> {
     await this.findOne(userId, id);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await this.prisma.transaction.update({
       where: { id },
       data,
@@ -60,7 +55,6 @@ export class TransactionsService {
   async remove(userId: string, id: string): Promise<Transaction> {
     await this.findOne(userId, id);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await this.prisma.transaction.delete({
       where: { id },
     });

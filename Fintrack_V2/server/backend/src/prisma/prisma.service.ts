@@ -1,5 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+
+// 1. THE FIX: Point directly to your custom generated output!
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -14,7 +16,7 @@ export class PrismaService
       connectionString: config.get<string>('DATABASE_URL'),
     });
 
-    // Use 'as any' here to bypass the conflicting @types/pg versions
+    // The 'as any' safely bypasses the strict version mismatch for now
     const adapter = new PrismaPg(pool as any);
 
     super({

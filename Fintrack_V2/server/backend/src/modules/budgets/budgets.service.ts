@@ -8,21 +8,16 @@ import { Budget } from '@prisma/client';
 export class BudgetsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(
-    userId: string,
-    createBudgetDto: CreateBudgetDto,
-  ): Promise<Budget> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  async create(userId: string, data: CreateBudgetDto): Promise<Budget> {
     return await this.prisma.budget.create({
       data: {
-        ...createBudgetDto,
+        ...data,
         userId,
       },
     });
   }
 
   async findAll(userId: string): Promise<Budget[]> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await this.prisma.budget.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -30,30 +25,33 @@ export class BudgetsService {
   }
 
   async findOne(userId: string, id: string): Promise<Budget> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const budget: Budget | null = await this.prisma.budget.findFirst({
+    const budget = await this.prisma.budget.findFirst({
       where: { id, userId },
     });
-    if (!budget) throw new NotFoundException('Budget not found');
+
+    if (!budget) {
+      throw new NotFoundException(`Budget with ID ${id} not found.`);
+    }
+
     return budget;
   }
 
   async update(
     userId: string,
     id: string,
-    updateBudgetDto: UpdateBudgetDto,
+    data: UpdateBudgetDto,
   ): Promise<Budget> {
     await this.findOne(userId, id);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return await this.prisma.budget.update({
       where: { id },
-      data: updateBudgetDto,
+      data,
     });
   }
 
   async remove(userId: string, id: string): Promise<Budget> {
     await this.findOne(userId, id);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return await this.prisma.budget.delete({
       where: { id },
     });

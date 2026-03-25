@@ -6,5 +6,5 @@ export default defineConfig({
     url: process.env.DATABASE_URL!,
   },
   // Add the engine property required by the SchemaEngineConfigClassic type
-  engine: 'classic',
+  // engine: 'classic',
 });
