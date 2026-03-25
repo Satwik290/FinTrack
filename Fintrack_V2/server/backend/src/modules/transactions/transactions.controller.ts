@@ -20,10 +20,10 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Transaction } from '@prisma/client';
 
 /**
- * Interface to fix ESLint 'unsafe member access' errors
- * by providing a type for the authenticated user object.
+ * Interface to provide a type for the authenticated user object.
  */
 interface RequestUser {
   sub: string;
@@ -48,7 +48,7 @@ export class TransactionsController {
   async create(
     @CurrentUser() user: RequestUser,
     @Body() createTransactionDto: CreateTransactionDto,
-  ) {
+  ): Promise<Transaction> {
     return await this.transactionsService.create(
       user.sub,
       createTransactionDto,
@@ -61,7 +61,7 @@ export class TransactionsController {
     status: 200,
     description: 'List of transactions returned successfully.',
   })
-  async findAll(@CurrentUser() user: RequestUser) {
+  async findAll(@CurrentUser() user: RequestUser): Promise<Transaction[]> {
     return await this.transactionsService.findAll(user.sub);
   }
 
@@ -70,7 +70,10 @@ export class TransactionsController {
   @ApiParam({ name: 'id', description: 'The unique ID of the transaction' })
   @ApiResponse({ status: 200, description: 'Transaction details returned.' })
   @ApiResponse({ status: 404, description: 'Transaction not found.' })
-  async findOne(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+  async findOne(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ): Promise<Transaction> {
     return await this.transactionsService.findOne(user.sub, id);
   }
 
@@ -88,7 +91,7 @@ export class TransactionsController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
     @Body() updateTransactionDto: UpdateTransactionDto,
-  ) {
+  ): Promise<Transaction> {
     return await this.transactionsService.update(
       user.sub,
       id,
@@ -106,7 +109,10 @@ export class TransactionsController {
     status: 200,
     description: 'Transaction deleted successfully.',
   })
-  async remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+  async remove(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ): Promise<Transaction> {
     return await this.transactionsService.remove(user.sub, id);
   }
 }

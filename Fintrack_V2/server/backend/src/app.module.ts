@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { BudgetsModule } from './modules/budgets/budgets.module';
 import { GqlArgumentsHost } from '@nestjs/graphql';
 
 @Module({
@@ -22,6 +23,7 @@ import { GqlArgumentsHost } from '@nestjs/graphql';
     }),
     TransactionsModule,
     GqlArgumentsHost,
+    BudgetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
