@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, new FastifyAdapter());
 
+  app.enableCors({ origin: 'http://localhost:3000' });
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());
   app.useGlobalInterceptors(new TransformInterceptor());
@@ -23,9 +24,10 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document, {
-    useGlobalPrefix: true, // This allows access at /docs instead of /api/docs
+    useGlobalPrefix: true,
   });
-  await app.listen(3000);
+
+  await app.listen(3001);
 }
 
 bootstrap().catch((err) => console.error(err));

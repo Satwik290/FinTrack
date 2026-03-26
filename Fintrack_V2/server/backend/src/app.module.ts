@@ -7,7 +7,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
-import { GqlArgumentsHost } from '@nestjs/graphql';
 
 @Module({
   imports: [
@@ -22,7 +21,6 @@ import { GqlArgumentsHost } from '@nestjs/graphql';
       signOptions: { expiresIn: '1d' },
     }),
     TransactionsModule,
-    GqlArgumentsHost,
     BudgetsModule,
   ],
   controllers: [AppController],

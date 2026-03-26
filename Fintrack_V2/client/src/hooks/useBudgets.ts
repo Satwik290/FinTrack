@@ -13,12 +13,12 @@ export interface Budget {
 }
 
 export const MOCK_BUDGETS: Budget[] = [
-  { id: '1', category: 'Food',          limit: 8000,  spent: 6200, period: 'monthly' },
-  { id: '2', category: 'Transport',     limit: 3000,  spent: 1800, period: 'monthly' },
-  { id: '3', category: 'Shopping',      limit: 5000,  spent: 5700, period: 'monthly' }, // over budget
-  { id: '4', category: 'Entertainment', limit: 2000,  spent: 299,  period: 'monthly' },
-  { id: '5', category: 'Healthcare',    limit: 2000,  spent: 850,  period: 'monthly' },
-  { id: '6', category: 'Utilities',     limit: 1500,  spent: 1350, period: 'monthly' }, // 90%
+  { id: '1', category: 'Food',          limit: 8000, spent: 6200, period: 'monthly' },
+  { id: '2', category: 'Transport',     limit: 3000, spent: 1800, period: 'monthly' },
+  { id: '3', category: 'Shopping',      limit: 5000, spent: 5700, period: 'monthly' },
+  { id: '4', category: 'Entertainment', limit: 2000, spent: 299,  period: 'monthly' },
+  { id: '5', category: 'Healthcare',    limit: 2000, spent: 850,  period: 'monthly' },
+  { id: '6', category: 'Utilities',     limit: 1500, spent: 1350, period: 'monthly' },
 ];
 
 export function useBudgets() {
@@ -27,7 +27,8 @@ export function useBudgets() {
     queryFn: async () => {
       try {
         const res = await api.get('/budgets');
-        return res.data;
+        const data = res.data?.data ?? res.data;
+        return Array.isArray(data) ? data : MOCK_BUDGETS;
       } catch {
         return MOCK_BUDGETS;
       }
@@ -42,7 +43,7 @@ export function useCreateBudget() {
     mutationFn: async (data: Omit<Budget, 'id' | 'spent'>) => {
       try {
         const res = await api.post('/budgets', data);
-        return res.data;
+        return res.data?.data ?? res.data;
       } catch {
         return { ...data, id: Date.now().toString(), spent: 0 };
       }

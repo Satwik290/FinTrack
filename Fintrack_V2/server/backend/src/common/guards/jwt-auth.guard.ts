@@ -7,7 +7,12 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
-type AuthenticatedRequest = Request & Record<string, unknown>;
+interface JwtPayload {
+  sub: string;
+  email: string;
+}
+
+type AuthenticatedRequest = Request & { user?: JwtPayload };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -20,14 +25,10 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     try {
-      const payload = await this.jwtService.verifyAsync<
-        Record<string, unknown>
-      >(token, {
-        secret: 'secret123', // Hardcoded here as in AppModule currently. Can be moved to env.
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret: 'secret123',
       });
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
-      request['user'] = payload;
+      request.user = payload;
     } catch {
       throw new UnauthorizedException();
     }

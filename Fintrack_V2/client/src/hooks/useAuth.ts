@@ -12,14 +12,13 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
       const res = await api.post('/auth/login', { email, password });
-      return res.data as { token: string };
+      return res.data.data as { token: string };
     },
     onSuccess: (data) => {
       localStorage.setItem('fintrack_token', data.token);
-      // Decode basic info from token (email from payload)
       try {
         const payload = JSON.parse(atob(data.token.split('.')[1]));
-        setUser({ id: payload.userId, email: payload.email || '' });
+        setUser({ id: payload.sub, email: payload.email || '' });
       } catch {
         setUser({ id: 'user', email: '' });
       }
@@ -34,7 +33,7 @@ export function useAuth() {
   const signupMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
       const res = await api.post('/auth/signup', { email, password });
-      return res.data as { id: string; email: string };
+      return res.data.data as { id: string; email: string };
     },
     onSuccess: (data) => {
       toast.success('Account created! Please log in.');
