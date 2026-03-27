@@ -1,11 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Flame } from 'lucide-react';
+import { Plus, X, Flame, Loader2 } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useBudgets, useCreateBudget, MOCK_BUDGETS, CATEGORY_COLORS } from '@/hooks/useBudgets';
+import { useBudgets, useCreateBudget, CATEGORY_COLORS } from '@/hooks/useBudgets';
 
 const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Healthcare', 'Utilities', 'Other'];
 
@@ -26,7 +26,7 @@ function getProgressColor(pct: number): 'safe' | 'warn' | 'danger' {
 }
 
 export default function BudgetPage() {
-  const { data: budgets = MOCK_BUDGETS } = useBudgets();
+  const { data: budgets, isLoading, isError } = useBudgets();
   const createBudget = useCreateBudget();
   const [showModal, setShowModal] = useState(false);
 
@@ -35,13 +35,18 @@ export default function BudgetPage() {
     defaultValues: { category: 'Food' },
   });
 
-  const totalBudget   = budgets.reduce((s, b) => s + b.limit, 0);
-  const totalSpent    = budgets.reduce((s, b) => s + b.spent, 0);
-  const overBudget    = budgets.filter((b) => b.spent > b.limit).length;
-  const overallPct    = Math.round((totalSpent / totalBudget) * 100);
+  const allBudgets = budgets ?? [];
+  const totalBudget = allBudgets.reduce((s, b) => s + b.limit, 0);
+  const totalSpent  = allBudgets.reduce((s, b) => s + b.spent, 0);
+  const overBudget  = allBudgets.filter((b) => b.spent > b.limit).length;
+  // Guard against division by zero → NaN%
+  const overallPct  = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   function onSubmit(data: FormData) {
-    createBudget.mutate({ ...data, period: 'monthly' }, { onSuccess: () => { setShowModal(false); reset(); } });
+    createBudget.mutate(
+      { ...data, period: 'monthly' },
+      { onSuccess: () => { setShowModal(false); reset(); } }
+    );
   }
 
   return (
@@ -74,7 +79,9 @@ export default function BudgetPage() {
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 13, opacity: 0.8 }}>Overall</span>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{overallPct}%</span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>
+              {totalBudget > 0 ? `${overallPct}%` : '—'}
+            </span>
           </div>
           <div style={{ height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 99, overflow: 'hidden' }}>
             <motion.div
@@ -92,10 +99,28 @@ export default function BudgetPage() {
         </div>
       </motion.div>
 
+      {/* States */}
+      {isLoading && (
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+          Loading budgets…
+        </div>
+      )}
+      {isError && (
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--danger)' }}>
+          Failed to load budgets. Is the server running?
+        </div>
+      )}
+      {!isLoading && !isError && allBudgets.length === 0 && (
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
+          No budgets yet. Create your first one!
+        </div>
+      )}
+
       {/* Budget cards grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-        {budgets.map((b, i) => {
-          const pct = Math.round((b.spent / b.limit) * 100);
+        {allBudgets.map((b, i) => {
+          const pct = b.limit > 0 ? Math.round((b.spent / b.limit) * 100) : 0;
           const level = getProgressColor(pct);
           const color = CATEGORY_COLORS[b.category] ?? '#6366f1';
           return (
@@ -186,6 +211,8 @@ export default function BudgetPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

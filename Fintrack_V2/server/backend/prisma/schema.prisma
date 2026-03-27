@@ -1,5 +1,5 @@
 generator client {
-  provider   = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -17,16 +17,17 @@ model User {
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  amount      Float
-  type        String   // e.g., 'INCOME' or 'EXPENSE'
-  category    String   // e.g., 'FOOD', 'RENT'
-  description String?
-  createdAt   DateTime @default(now())
-  
-  // Foreign key relation to the User
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  amount    Float
+  type      String   // 'income' | 'expense'
+  category  String
+  merchant  String
+  date      String
+  note      String?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Budget {
@@ -34,8 +35,8 @@ model Budget {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   category  String
-  amount    Float
-  period    String   @default("MONTHLY")
+  limit     Float
+  period    String   @default("monthly")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

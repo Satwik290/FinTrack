@@ -21,7 +21,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"npm run dev --prefix ./fintrack-client\" \"npm run dev --prefix ./server\"",
+    "dev": "concurrently \"npm run dev --prefix ./Fintrack_V1/fintrack-client\" \"npm run dev --prefix ./Fintrack_V1/server\"",
     "start": "concurrently \"npm run build --prefix ./client && npm run start --prefix ./server\"",
     "build": "npm run build --prefix ./client"
   },

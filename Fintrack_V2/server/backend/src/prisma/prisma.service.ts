@@ -17,7 +17,7 @@ export class PrismaService
     });
 
     // The 'as any' safely bypasses the strict version mismatch for now
-    const adapter = new PrismaPg(pool  as any);
+    const adapter = new PrismaPg(pool as any);
 
     super({
       adapter,

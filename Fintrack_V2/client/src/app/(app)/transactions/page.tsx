@@ -1,11 +1,16 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Trash2, X } from 'lucide-react';
+import { Plus, Search, Trash2, X, Loader2 } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTransactions, useCreateTransaction, useDeleteTransaction, CATEGORY_COLORS, MOCK_TRANSACTIONS } from '@/hooks/useTransactions';
+import {
+  useTransactions,
+  useCreateTransaction,
+  useDeleteTransaction,
+  CATEGORY_COLORS,
+} from '@/hooks/useTransactions';
 
 const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Healthcare', 'Utilities', 'Salary', 'Investment', 'Other'];
 
@@ -39,7 +44,7 @@ function getCategoryEmoji(cat: string): string {
 }
 
 export default function TransactionsPage() {
-  const { data: transactions = MOCK_TRANSACTIONS } = useTransactions();
+  const { data: transactions, isLoading, isError } = useTransactions();
   const createMutation = useCreateTransaction();
   const deleteMutation = useDeleteTransaction();
   const [showModal, setShowModal] = useState(false);
@@ -52,7 +57,9 @@ export default function TransactionsPage() {
     defaultValues: { type: 'expense', category: 'Food', date: new Date().toISOString().split('T')[0] },
   });
 
-  const filtered = transactions
+  const allTransactions = transactions ?? [];
+
+  const filtered = allTransactions
     .filter((t) => filterType === 'all' || t.type === filterType)
     .filter((t) =>
       t.merchant.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,10 +77,12 @@ export default function TransactionsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Transactions</h1>
-          <p className="page-subtitle">{transactions.length} transactions this month</p>
+          <p className="page-subtitle">
+            {isLoading ? 'Loading…' : `${allTransactions.length} transactions this month`}
+          </p>
         </div>
         <button className="btn btn-primary" id="add-transaction-btn" onClick={() => setShowModal(true)}>
-          <Plus size={17} /> Add Transaction
+          <Plus size={17} /> Add
         </button>
       </div>
 
@@ -82,7 +91,7 @@ export default function TransactionsPage() {
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
-            className="input" placeholder="Search transactions…"
+            className="input" placeholder="Search…"
             style={{ paddingLeft: 36, height: 38 }}
             value={search} onChange={(e) => setSearch(e.target.value)}
           />
@@ -107,9 +116,18 @@ export default function TransactionsPage() {
 
       {/* List */}
       <div className="card" style={{ overflow: 'hidden' }}>
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+            Loading transactions…
+          </div>
+        ) : isError ? (
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--danger)' }}>
+            Failed to load transactions. Is the server running?
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
-            No transactions found
+            {allTransactions.length === 0 ? 'No transactions yet. Add your first one!' : 'No transactions match your filter.'}
           </div>
         ) : (
           <div>
@@ -142,6 +160,7 @@ export default function TransactionsPage() {
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
+                    {t.note && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {t.note}</span>}
                   </div>
                 </div>
                 <span style={{
@@ -181,7 +200,6 @@ export default function TransactionsPage() {
               </div>
               <form onSubmit={handleSubmit(onSubmit)}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  {/* Type */}
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={labelStyle}>Type</label>
                     <select {...register('type')} className="input">
@@ -189,31 +207,26 @@ export default function TransactionsPage() {
                       <option value="income">Income</option>
                     </select>
                   </div>
-                  {/* Amount */}
                   <div>
                     <label style={labelStyle}>Amount (₹)</label>
                     <input {...register('amount')} type="number" placeholder="0.00" className={`input ${errors.amount ? 'input-error' : ''}`} />
                     {errors.amount && <p style={errStyle}>{errors.amount.message}</p>}
                   </div>
-                  {/* Category */}
                   <div>
                     <label style={labelStyle}>Category</label>
                     <select {...register('category')} className="input">
                       {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                     </select>
                   </div>
-                  {/* Merchant */}
                   <div>
                     <label style={labelStyle}>Merchant / Source</label>
                     <input {...register('merchant')} placeholder="e.g. Swiggy" className={`input ${errors.merchant ? 'input-error' : ''}`} />
                     {errors.merchant && <p style={errStyle}>{errors.merchant.message}</p>}
                   </div>
-                  {/* Date */}
                   <div>
                     <label style={labelStyle}>Date</label>
                     <input {...register('date')} type="date" className="input" />
                   </div>
-                  {/* Note */}
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={labelStyle}>Note (optional)</label>
                     <input {...register('note')} placeholder="Any note…" className="input" />
@@ -263,6 +276,8 @@ export default function TransactionsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

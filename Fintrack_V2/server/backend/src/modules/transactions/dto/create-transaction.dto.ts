@@ -2,7 +2,9 @@ import { createZodDto } from 'nestjs-zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { createTransactionSchema } from '../transaction.schema';
 
-export class CreateTransactionDto extends createZodDto(createTransactionSchema) {
+export class CreateTransactionDto extends createZodDto(
+  createTransactionSchema,
+) {
   @ApiProperty({ example: 50.75 })
   amount!: number;
 
