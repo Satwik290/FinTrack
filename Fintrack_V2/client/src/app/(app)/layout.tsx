@@ -279,17 +279,17 @@ function BottomNav() {
 
 /* ─── Main Layout ────────────────────────────────────────── */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router    = useRouter();
+  const router = useRouter();
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isMobile, setIsMobile]     = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  // 1. Add a mounted state
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('fintrack_token');
-    if (!token) router.push('/auth');
-  }, [router]);
-
-  useEffect(() => {
+    // 2. Set mounted to true once the client takes over
+    setIsMounted(true);
+    
     const mq = window.matchMedia('(max-width: 767px)');
     setIsMobile(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
@@ -298,6 +298,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sidebarW = collapsed ? 68 : 240;
+
+  if (!isMounted) {
+    return null; 
+  }
 
   if (isMobile) {
     return (
