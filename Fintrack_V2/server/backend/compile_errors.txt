@@ -1,0 +1,43 @@
+
+> backend@0.0.1 build
+> nest build
+
+[96msrc/modules/wealth/wealth.service.ts[0m:[93m11[0m:[93m38[0m - [91merror[0m[90m TS2339: [0mProperty 'asset' does not exist on type 'PrismaService'.
+
+[7m11[0m     const assets = await this.prisma.asset.findMany({ where: { userId } });
+[7m  [0m [91m                                     ~~~~~[0m
+[96msrc/modules/wealth/wealth.service.ts[0m:[93m12[0m:[93m43[0m - [91merror[0m[90m TS2339: [0mProperty 'liability' does not exist on type 'PrismaService'.
+
+[7m12[0m     const liabilities = await this.prisma.liability.findMany({ where: { userId } });
+[7m  [0m [91m                                          ~~~~~~~~~[0m
+[96msrc/modules/wealth/wealth.service.ts[0m:[93m28[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'asset' does not exist on type 'PrismaService'.
+
+[7m28[0m     return this.prisma.asset.create({
+[7m  [0m [91m                       ~~~~~[0m
+[96msrc/modules/wealth/wealth.service.ts[0m:[93m37[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'liability' does not exist on type 'PrismaService'.
+
+[7m37[0m     return this.prisma.liability.create({
+[7m  [0m [91m                       ~~~~~~~~~[0m
+[96msrc/modules/wealth/workers/price.worker.ts[0m:[93m20[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'asset' does not exist on type 'PrismaService'.
+
+[7m20[0m       const marketAssets = await this.prisma.asset.findMany({
+[7m  [0m [91m                                             ~~~~~[0m
+[96msrc/modules/wealth/workers/price.worker.ts[0m:[93m43[0m:[93m31[0m - [91merror[0m[90m TS2339: [0mProperty 'asset' does not exist on type 'PrismaService'.
+
+[7m43[0m             await this.prisma.asset.update({
+[7m  [0m [91m                              ~~~~~[0m
+[96msrc/modules/wealth/workers/snapshot.worker.ts[0m:[93m20[0m:[93m42[0m - [91merror[0m[90m TS2339: [0mProperty 'asset' does not exist on type 'PrismaService'.
+
+[7m20[0m         const assets = await this.prisma.asset.findMany({ where: { userId: user.id } });
+[7m  [0m [91m                                         ~~~~~[0m
+[96msrc/modules/wealth/workers/snapshot.worker.ts[0m:[93m21[0m:[93m47[0m - [91merror[0m[90m TS2339: [0mProperty 'liability' does not exist on type 'PrismaService'.
+
+[7m21[0m         const liabilities = await this.prisma.liability.findMany({ where: { userId: user.id } });
+[7m  [0m [91m                                              ~~~~~~~~~[0m
+[96msrc/modules/wealth/workers/snapshot.worker.ts[0m:[93m27[0m:[93m27[0m - [91merror[0m[90m TS2339: [0mProperty 'netWorthSnapshot' does not exist on type 'PrismaService'.
+
+[7m27[0m         await this.prisma.netWorthSnapshot.create({
+[7m  [0m [91m                          ~~~~~~~~~~~~~~~~[0m
+
+Found 9 error(s).
+

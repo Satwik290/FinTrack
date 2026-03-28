@@ -1,0 +1,225 @@
+
+> client@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\satwi\OneDrive\Desktop\projects\FinTrack\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\satwi\OneDrive\Desktop\projects\FinTrack\Fintrack_V2\client\package-lock.json
+
+▲ Next.js 16.2.1 (Turbopack)
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 8 errors:
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:7:1
+Module not found: Can't resolve '../../../../components/wealth/AssetList'
+  [90m 5 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+  [90m 6 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+[31m[1m>[0m [90m 7 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 8 |[0m [36mimport[0m { [33mLoader2[0m, [33mAlertCircle[0m } [36mfrom[0m [32m'lucide-react'[0m;
+  [90m 9 |[0m [36mimport[0m { motion } [36mfrom[0m [32m'framer-motion'[0m;
+  [90m10 |[0m
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:8:1
+Module not found: Can't resolve '../../../../components/wealth/AssetList'
+  [90m 6 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+  [90m 7 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mLoader2[0m, [33mAlertCircle[0m } [36mfrom[0m [32m'lucide-react'[0m;
+  [90m10 |[0m [36mimport[0m { motion } [36mfrom[0m [32m'framer-motion'[0m;
+  [90m11 |[0m [36mexport[0m [36mdefault[0m [36mfunction[0m [33mWealthDashboard[0m() {
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:6:1
+Module not found: Can't resolve '../../../../components/wealth/LiabilityHeatmap'
+  [90m4 |[0m [36mimport[0m { useWealthSummary } [36mfrom[0m [32m'../../../../hooks/useWealthSummary'[0m;
+  [90m5 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+  [90m8 |[0m [36mimport[0m { [33mLoader2[0m, [33mAlertCircle[0m } [36mfrom[0m [32m'lucide-react'[0m;
+  [90m9 |[0m [36mimport[0m { motion } [36mfrom[0m [32m'framer-motion'[0m;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:7:1
+Module not found: Can't resolve '../../../../components/wealth/LiabilityHeatmap'
+  [90m 5 |[0m [36mimport[0m { useWealthSummary } [36mfrom[0m [32m'../../../../hooks/useWealthSummary'[0m;
+  [90m 6 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+[31m[1m>[0m [90m 7 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 8 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+  [90m 9 |[0m [36mimport[0m { [33mLoader2[0m, [33mAlertCircle[0m } [36mfrom[0m [32m'lucide-react'[0m;
+  [90m10 |[0m [36mimport[0m { motion } [36mfrom[0m [32m'framer-motion'[0m;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:5:1
+Module not found: Can't resolve '../../../../components/wealth/TotalWealthCard'
+  [90m3 |[0m [36mimport[0m [33mReact[0m [36mfrom[0m [32m'react'[0m;
+  [90m4 |[0m [36mimport[0m { useWealthSummary } [36mfrom[0m [32m'../../../../hooks/useWealthSummary'[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+  [90m7 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+  [90m8 |[0m [36mimport[0m { [33mLoader2[0m, [33mAlertCircle[0m } [36mfrom[0m [32m'lucide-react'[0m;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:6:1
+Module not found: Can't resolve '../../../../components/wealth/TotalWealthCard'
+  [90m4 |[0m [36mimport[0m [33mReact[0m [36mfrom[0m [32m'react'[0m;
+  [90m5 |[0m [36mimport[0m { useWealthSummary } [36mfrom[0m [32m'../../../../hooks/useWealthSummary'[0m;
+[31m[1m>[0m [90m6 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m7 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+  [90m8 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+  [90m9 |[0m [36mimport[0m { [33mLoader2[0m, [33mAlertCircle[0m } [36mfrom[0m [32m'lucide-react'[0m;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:4:1
+Module not found: Can't resolve '../../../../hooks/useWealthSummary'
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m [33mReact[0m [36mfrom[0m [32m'react'[0m;
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { useWealthSummary } [36mfrom[0m [32m'../../../../hooks/useWealthSummary'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+  [90m6 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+  [90m7 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:5:1
+Module not found: Can't resolve '../../../../hooks/useWealthSummary'
+  [90m3 |[0m [36mimport[0m { c [36mas[0m _c } [36mfrom[0m [32m"react/compiler-runtime"[0m;
+  [90m4 |[0m [36mimport[0m [33mReact[0m [36mfrom[0m [32m'react'[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m { useWealthSummary } [36mfrom[0m [32m'../../../../hooks/useWealthSummary'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m { [33mTotalWealthCard[0m } [36mfrom[0m [32m'../../../../components/wealth/TotalWealthCard'[0m;
+  [90m7 |[0m [36mimport[0m { [33mLiabilityHeatmap[0m } [36mfrom[0m [32m'../../../../components/wealth/LiabilityHeatmap'[0m;
+  [90m8 |[0m [36mimport[0m { [33mAssetList[0m } [36mfrom[0m [32m'../../../../components/wealth/AssetList'[0m;
+
+
+
+Import traces:
+  Client Component Browser:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component Browser]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Client Component SSR]
+    ./Fintrack_V2/client/src/app/(app)/wealth/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./Fintrack_V2/client/src/app/(app)/wealth/page.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)

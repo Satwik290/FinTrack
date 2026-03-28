@@ -12,8 +12,11 @@ model User {
   password  String
   createdAt DateTime @default(now())
 
-  transactions Transaction[]
-  budgets      Budget[]
+  transactions       Transaction[]
+  budgets            Budget[]
+  assets             Asset[]
+  liabilities        Liability[]
+  netWorthSnapshots  NetWorthSnapshot[]
 }
 
 model Transaction {
@@ -39,4 +42,39 @@ model Budget {
   period    String   @default("monthly")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Asset {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  name                String
+  ticker              String?
+  quantity            Float    @default(1.0)
+  type                String   // 'Market' | 'Manual'
+  currentValueInCents Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Liability {
+  id                      String   @id @default(uuid())
+  userId                  String
+  user                    User     @relation(fields: [userId], references: [id])
+  loanName                String
+  totalPrincipalInCents   Int
+  interestRate            Float // e.g. 5.5 for 5.5%
+  remainingBalanceInCents Int
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model NetWorthSnapshot {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  totalAssetsInCents Int
+  totalLiabsInCents  Int
+  netWorthInCents    Int
+  timestamp          DateTime @default(now())
 }
