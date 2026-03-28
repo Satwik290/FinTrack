@@ -1,56 +1,81 @@
-import React from 'react';
-import { useWealthStore } from '../../store/useWealthStore';
-import { Eye, EyeOff, TrendingUp, TrendingDown } from 'lucide-react';
+'use client';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff, TrendingUp, TrendingDown } from 'lucide-react';
+import { useWealthStore } from '@/store/useWealthStore';
 
-interface TotalWealthCardProps {
+interface Props {
   netWorthInCents: number;
+  totalAssetsInCents: number;
+  totalLiabilitiesInCents: number;
 }
 
-export const TotalWealthCard: React.FC<TotalWealthCardProps> = ({ netWorthInCents }) => {
+function fmtINR(cents: number) {
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(cents / 100);
+}
+
+export function TotalWealthCard({ netWorthInCents, totalAssetsInCents, totalLiabilitiesInCents }: Props) {
   const { isMasked, togglePrivacyMode } = useWealthStore();
 
-  const formattedNetWorth = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(netWorthInCents / 100);
-
-  // Example placeholder for 24h change logic
-  const changePercentage = 2.4; 
-  const isPositive = changePercentage >= 0;
+  const isPositive = netWorthInCents >= 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 relative overflow-hidden shadow-2xl"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        borderRadius: 20, padding: 28, color: '#fff', position: 'relative', overflow: 'hidden',
+        background: 'linear-gradient(145deg, #4f46e5 0%, #7c3aed 60%, #6d28d9 100%)',
+        boxShadow: '0 8px 32px rgba(99,102,241,0.4)',
+      }}
     >
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
-      
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-zinc-400 font-medium text-sm tracking-wider uppercase">Total Wealth</h2>
-        <button 
-          onClick={togglePrivacyMode}
-          className="text-zinc-500 hover:text-zinc-300 transition-colors"
-          title="Toggle Privacy Mode"
-        >
-          {isMasked ? <EyeOff size={20} /> : <Eye size={20} />}
-        </button>
-      </div>
+      {/* Decorative orbs */}
+      <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -20, right: 80, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
 
-      <div className="flex items-baseline space-x-4">
-        <h1 className="text-5xl font-bold text-white tracking-tight">
-          {isMasked ? '*********' : formattedNetWorth}
-        </h1>
-      </div>
+      <div style={{ position: 'relative' }}>
+        {/* Header row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <p style={{ fontSize: 12, opacity: 0.75, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Net Worth</p>
+          <button
+            onClick={togglePrivacyMode}
+            title={isMasked ? 'Show values' : 'Hide values'}
+            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
+          >
+            {isMasked ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
 
-      <div className="mt-4 flex items-center space-x-2">
-        <span className={`flex items-center text-sm font-semibold px-2 py-1 rounded-full ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-          {isPositive ? <TrendingUp size={16} className="mr-1" /> : <TrendingDown size={16} className="mr-1" />}
-          {Math.abs(changePercentage)}%
-        </span>
-        <span className="text-zinc-500 text-sm">vs last month</span>
+        {/* Net worth value */}
+        <p style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1.5, marginBottom: 8 }}>
+          {isMasked ? '₹ ••••••' : fmtINR(netWorthInCents)}
+        </p>
+
+        {/* Change indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24 }}>
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600,
+            padding: '3px 10px', borderRadius: 99,
+            background: isPositive ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)',
+            color: isPositive ? '#6ee7b7' : '#fca5a5',
+          }}>
+            {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+            {isPositive ? 'Positive' : 'Negative'} net worth
+          </span>
+        </div>
+
+        {/* Assets / Liabilities split */}
+        <div style={{ display: 'flex', gap: 24 }}>
+          <div>
+            <p style={{ fontSize: 11, opacity: 0.6, fontWeight: 500, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Assets</p>
+            <p style={{ fontSize: 18, fontWeight: 700 }}>{isMasked ? '••••' : fmtINR(totalAssetsInCents)}</p>
+          </div>
+          <div style={{ width: 1, background: 'rgba(255,255,255,0.2)' }} />
+          <div>
+            <p style={{ fontSize: 11, opacity: 0.6, fontWeight: 500, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Liabilities</p>
+            <p style={{ fontSize: 18, fontWeight: 700 }}>{isMasked ? '••••' : fmtINR(totalLiabilitiesInCents)}</p>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
-};
+}

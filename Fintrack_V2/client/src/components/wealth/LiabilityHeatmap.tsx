@@ -1,62 +1,103 @@
-import React from 'react';
+'use client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useWealthStore } from '../../store/useWealthStore';
+import { useWealthStore } from '@/store/useWealthStore';
+import type { Liability } from '@/hooks/useWealthSummary';
 
-interface LiabilityHeatmapProps {
-  liabilities: Array<{
-    id: string;
-    loanName: string;
-    interestRate: number;
-    remainingBalanceInCents: number;
-  }>;
+interface Props { liabilities: Liability[] }
+
+function fmtINR(rupees: number) {
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(rupees);
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  const { isMasked } = useWealthStore();
-
-  if (active && payload && payload.length) {
+// Note: CustomTooltip cannot call hooks inline as it's not a proper React component in Recharts context.
+// We read isMasked from outside and pass it via closure.
+function makeTooltip(isMasked: boolean) {
+  return function CustomTooltip({ active, payload, label }: {
+    active?: boolean;
+    payload?: { value: number; payload: { rate: number } }[];
+    label?: string;
+  }) {
+    if (!active || !payload?.length) return null;
     return (
-      <div className="bg-zinc-800 border border-zinc-700 p-3 rounded-lg shadow-xl">
-        <p className="text-white font-medium">{label}</p>
-        <p className="text-rose-400 text-sm">
-          Balance: {isMasked ? '****' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(payload[0].value as number)}
+      <div style={{
+        background: 'var(--bg-surface)', border: '1px solid var(--border)',
+        borderRadius: 12, padding: '12px 16px', boxShadow: 'var(--shadow-md)',
+      }}>
+        <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>{label}</p>
+        <p style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 2 }}>
+          Balance: {isMasked ? '••••' : fmtINR(payload[0].value)}
         </p>
-        <p className="text-zinc-400 text-xs mt-1">Interest Rate: {payload[0].payload.rate}%</p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          Interest Rate: {payload[0].payload.rate}%
+        </p>
       </div>
     );
-  }
-  return null;
-};
+  };
+}
 
-export const LiabilityHeatmap: React.FC<LiabilityHeatmapProps> = ({ liabilities }) => {
-  const data = liabilities.map(lib => ({
-    name: lib.loanName,
-    balance: lib.remainingBalanceInCents / 100,
-    rate: lib.interestRate,
-  })).sort((a, b) => b.rate - a.rate); // Sort by highest interest rate
+export function LiabilityHeatmap({ liabilities }: Props) {
+  const { isMasked } = useWealthStore();
+
+  const data = [...liabilities]
+    .sort((a, b) => b.interestRate - a.interestRate)
+    .map(lib => ({
+      name: lib.loanName,
+      balance: lib.remainingBalanceInCents / 100,
+      rate: lib.interestRate,
+    }));
+
+  const CustomTooltip = makeTooltip(isMasked);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 h-[400px]">
-      <h2 className="text-white font-semibold text-lg mb-6">Liability Heatmap</h2>
+    <div className="card" style={{ padding: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3 style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Liability Heatmap</h3>
+        <div style={{ display: 'flex', gap: 12 }}>
+          {[
+            { color: '#ef4444', label: '>10% rate' },
+            { color: '#f59e0b', label: '5–10%' },
+            { color: '#3b82f6', label: '<5%' },
+          ].map(l => (
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
+              {l.label}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {liabilities.length === 0 ? (
-        <div className="flex h-full items-center justify-center text-zinc-500">No liabilities found.</div>
+        <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+          No liabilities found. Great job! 🎉
+        </div>
       ) : (
-        <ResponsiveContainer width="100%" height="85%">
-          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 0, left: 40, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" horizontal={false} />
-            <XAxis type="number" hide />
-            <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#a1a1aa' }} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#27272a' }} />
-            <Bar dataKey="balance" radius={[0, 4, 4, 0]}>
-              {data.map((entry, index) => {
-                // Color intensity based on interest rate
-                const color = entry.rate > 10 ? '#ef4444' : entry.rate > 5 ? '#f59e0b' : '#3b82f6';
-                return <Cell key={`cell-${index}`} fill={color} />;
-              })}
+        <ResponsiveContainer width="100%" height={Math.max(liabilities.length * 56, 180)}>
+          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+            <XAxis
+              type="number"
+              tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`}
+              tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              axisLine={false} tickLine={false}
+            />
+            <YAxis
+              dataKey="name" type="category"
+              axisLine={false} tickLine={false}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+              width={120}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bg-surface-2)' }} />
+            <Bar dataKey="balance" radius={[0, 6, 6, 0]}>
+              {data.map((entry, i) => (
+                <Cell
+                  key={`cell-${i}`}
+                  fill={entry.rate > 10 ? '#ef4444' : entry.rate > 5 ? '#f59e0b' : '#3b82f6'}
+                />
+              ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       )}
     </div>
   );
-};
+}

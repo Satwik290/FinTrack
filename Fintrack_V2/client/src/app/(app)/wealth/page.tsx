@@ -1,62 +1,103 @@
 'use client';
-
-import React from 'react';
-import { useWealthSummary } from '../../../hooks/useWealthSummary';
-import { TotalWealthCard } from '../../../components/wealth/TotalWealthCard';
-import { LiabilityHeatmap } from '../../../components/wealth/LiabilityHeatmap';
-import { AssetList } from '../../../components/wealth/AssetList';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useWealthSummary } from '@/hooks/useWealthSummary';
+import { TotalWealthCard } from '@/components/wealth/TotalWealthCard';
+import { LiabilityHeatmap } from '@/components/wealth/LiabilityHeatmap';
+import { AssetList } from '@/components/wealth/AssetList';
+import { AddAssetModal } from '@/components/wealth/AddAssetModal';
+import { AddLiabilityModal } from '@/components/wealth/Addliabilitymodal';
+import { Loader2, Plus } from 'lucide-react';
 
 export default function WealthDashboard() {
   const { data, isLoading, isError } = useWealthSummary();
+  const [showAssetModal, setShowAssetModal] = useState(false);
+  const [showLiabilityModal, setShowLiabilityModal] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center p-6 lg:p-10">
-        <Loader2 className="animate-spin text-emerald-500" size={48} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 12, color: 'var(--text-muted)' }}>
+        <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
+        Loading wealth data…
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex h-screen items-center justify-center p-6 lg:p-10">
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-6 rounded-2xl flex items-center space-x-4">
-          <AlertCircle size={32} />
-          <div>
-            <h2 className="font-semibold text-lg">Failed to load wealth data</h2>
-            <p className="text-sm opacity-80 mt-1">Please ensure the backend API is running and you are logged in.</p>
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+        <div style={{
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+          borderRadius: 16, padding: '24px 32px', color: 'var(--danger)', textAlign: 'center',
+        }}>
+          <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Failed to load wealth data</p>
+          <p style={{ fontSize: 13, opacity: 0.8 }}>Ensure the backend is running and you are logged in.</p>
         </div>
       </div>
     );
   }
 
-  const { netWorthInCents, assets, liabilities } = data || { netWorthInCents: 0, assets: [], liabilities: [] };
+  const summary = data ?? { netWorthInCents: 0, totalAssetsInCents: 0, totalLiabilitiesInCents: 0, assets: [], liabilities: [] };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="max-w-7xl mx-auto p-6 lg:p-10 space-y-8"
-    >
-      <header>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Wealth Overview</h1>
-        <p className="text-zinc-400 mt-2">Track your long-term wealth, market assets, and liabilities.</p>
-      </header>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+      className="animate-fade-in">
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-8">
-          <TotalWealthCard netWorthInCents={netWorthInCents} />
-          <AssetList assets={assets} />
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Wealth Overview</h1>
+          <p className="page-subtitle">Track long-term wealth, market assets, and liabilities</p>
         </div>
-        
-        <div className="lg:col-span-2">
-          <LiabilityHeatmap liabilities={liabilities} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowLiabilityModal(true)}>
+            <Plus size={15} /> Add Liability
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAssetModal(true)}>
+            <Plus size={15} /> Add Asset
+          </button>
         </div>
       </div>
+
+      {/* Top row: wealth card + stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 20, marginBottom: 20 }}>
+        <TotalWealthCard
+          netWorthInCents={summary.netWorthInCents}
+          totalAssetsInCents={summary.totalAssetsInCents}
+          totalLiabilitiesInCents={summary.totalLiabilitiesInCents}
+        />
+
+        {/* Quick stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <StatCard label="Total Assets" value={summary.totalAssetsInCents} color="var(--success)" />
+          <StatCard label="Total Liabilities" value={summary.totalLiabilitiesInCents} color="var(--danger)" />
+          <StatCard label="Assets Count" value={summary.assets.length} color="var(--indigo-500)" isCount />
+          <StatCard label="Liabilities Count" value={summary.liabilities.length} color="var(--warning)" isCount />
+        </div>
+      </div>
+
+      {/* Bottom row: asset list + liability heatmap */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <AssetList assets={summary.assets} />
+        <LiabilityHeatmap liabilities={summary.liabilities} />
+      </div>
+
+      {showAssetModal && <AddAssetModal onClose={() => setShowAssetModal(false)} />}
+      {showLiabilityModal && <AddLiabilityModal onClose={() => setShowLiabilityModal(false)} />}
     </motion.div>
+  );
+}
+
+function StatCard({ label, value, color, isCount }: { label: string; value: number; color: string; isCount?: boolean }) {
+  const display = isCount
+    ? String(value)
+    : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value / 100);
+
+  return (
+    <div className="card" style={{ padding: 20 }}>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 8 }}>{label}</p>
+      <p style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: -0.5 }}>{display}</p>
+    </div>
   );
 }

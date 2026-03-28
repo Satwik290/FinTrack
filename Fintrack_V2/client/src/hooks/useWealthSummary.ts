@@ -1,34 +1,44 @@
+'use client';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '@/lib/api'; // reuse the same axios instance (port 3001, fintrack_token)
 
-// Ensure the token or fetching respects the auth pattern of the user's setup
-// FinTrack might employ cookies or a localStorage token, so we create a standard axios instance.
-const apiClient = axios.create({
-  baseURL: '/api/v2', // Vite/Next proxy will handle rewriting, or this is a relative path.
-});
+export interface Asset {
+  id: string;
+  name: string;
+  ticker?: string;
+  quantity: number;
+  type: 'Market' | 'Manual';
+  currentValueInCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
-// An interceptor to attach JWT token if stored in localStorage (common approach).
-apiClient.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
+export interface Liability {
+  id: string;
+  loanName: string;
+  totalPrincipalInCents: number;
+  interestRate: number;
+  remainingBalanceInCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
-export const fetchWealthSummary = async () => {
-  // If the user's Next.js setup proxies /api/v2, this will work out of the box. 
-  // Otherwise, we might need absolute URL to backend e.g. http://localhost:3000
-  const response = await apiClient.get('/wealth/summary');
-  return response.data;
-};
+export interface WealthSummary {
+  totalAssetsInCents: number;
+  totalLiabilitiesInCents: number;
+  netWorthInCents: number;
+  assets: Asset[];
+  liabilities: Liability[];
+}
 
-export const useWealthSummary = () => {
-  return useQuery({
+export function useWealthSummary() {
+  return useQuery<WealthSummary>({
     queryKey: ['wealthSummary'],
-    queryFn: fetchWealthSummary,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 mins
+    queryFn: async () => {
+      // Endpoint: GET /api/wealth/summary  (global prefix 'api' + controller 'wealth')
+      const res = await api.get('/wealth/summary');
+      return res.data?.data ?? res.data;
+    },
+    refetchInterval: 5 * 60 * 1000, // refetch every 5 min
   });
-};
+}
