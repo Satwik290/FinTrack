@@ -17,6 +17,8 @@ model User {
   assets             Asset[]
   liabilities        Liability[]
   netWorthSnapshots  NetWorthSnapshot[]
+  mutualFundHoldings MutualFundHolding[]
+  stockHoldings      StockHolding[]
 }
 
 model Transaction {
@@ -77,4 +79,52 @@ model NetWorthSnapshot {
   totalLiabsInCents  Int
   netWorthInCents    Int
   timestamp          DateTime @default(now())
+}
+
+model MutualFundHolding {
+  id                   String    @id @default(cuid())
+  userId               String
+  schemeCode           String
+  schemeName           String
+  fundHouse            String    @default("")
+  category             String    @default("Equity")
+
+  // Lumpsum fields
+  units                Float     @default(0)
+  avgNAV               Float     @default(0)
+  currentNAV           Float     @default(0)
+  investedAt           String?   // Date string YYYY-MM-DD
+
+  // SIP fields (null = not a SIP holding)
+  isSIP                Boolean   @default(false)
+  sipAmount            Float?    // Monthly SIP amount in ₹
+  sipDay               Int?      // Day of month (1-28)
+  sipStartDate         String?   // YYYY-MM-DD
+  totalSipInstallments Int       @default(0)
+
+  navLastUpdated       DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StockHolding {
+  id                String    @id @default(cuid())
+  userId            String
+  ticker            String    // e.g. TCS.NS, AAPL, BTC-USD
+  exchange          String    // 'NSE' | 'US' | 'CRYPTO'
+  companyName       String
+  quantity          Float
+  avgBuyPrice       Float     // In ₹
+  currentPrice      Float     @default(0) // In ₹
+  currency          String    @default("INR") // Original currency before conversion
+
+  priceLastUpdated  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
