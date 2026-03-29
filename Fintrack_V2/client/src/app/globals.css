@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /* ─── Design Tokens ──────────────────────────────────────────────── */
@@ -353,3 +354,49 @@ body {
   .app-main { padding: 12px !important; padding-bottom: calc(var(--bottom-nav-height) + 12px) !important; }
   .page-title { font-size: 16px; }
 }
+
+/* Space Mono for financial numbers */
+.mono { font-family: 'Space Mono', 'JetBrains Mono', 'Courier New', monospace; }
+ 
+/* Wealth dark header card stays dark in both light and dark mode */
+.wealth-header {
+  background: linear-gradient(145deg, #0f1117 0%, #1a1f2e 60%, #1e1628 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+ 
+/* Segmented control tab bar */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-surface-2);
+  padding: 4px;
+  border-radius: 14px;
+  width: fit-content;
+}
+.tab-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s var(--ease-out);
+  font-family: inherit;
+}
+.tab-bar-item.active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+.tab-bar-item:not(.active) {
+  background: transparent;
+  color: var(--text-muted);
+}
+.tab-bar-item:not(.active):hover {
+  color: var(--text-secondary);
+  background: rgba(0,0,0,0.04);
+}
+ 

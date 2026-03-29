@@ -18,16 +18,19 @@ const NAV = [
   { href: "/budget",       icon: PiggyBank,       label: "Budget"        },
   { href: "/insights",     icon: Sparkles,        label: "Insights"      },
   { href: "/goals",        icon: Target,          label: "Goals"         },
-  { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
-  { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
+  // { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
+  // { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
   { href: "/wealth",       icon: Landmark,        label: "Wealth"        },
 ];
 
 const BOTTOM_NAV_ITEMS = [
-  { href: "/dashboard",    icon: LayoutDashboard, label: "Home"   },
-  { href: "/transactions", icon: ArrowLeftRight,  label: "Txns"   },
-  { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
-  { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
+  { href: "/dashboard",    icon: LayoutDashboard, label: "Dashboard"     },
+  { href: "/transactions", icon: ArrowLeftRight,  label: "Transactions"  },
+  { href: "/budget",       icon: PiggyBank,       label: "Budget"        },
+  { href: "/insights",     icon: Sparkles,        label: "Insights"      },
+  { href: "/goals",        icon: Target,          label: "Goals"         },
+  // { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
+  // { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
   { href: "/wealth",       icon: Landmark,        label: "Wealth" },
 ];
 

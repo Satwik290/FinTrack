@@ -62,11 +62,18 @@ model Asset {
 model Liability {
   id                      String   @id @default(uuid())
   userId                  String
-  user                    User     @relation(fields: [userId], references: [id])
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   loanName                String
+  category                String   @default("Other") // e.g., 'Education', 'Home', 'Personal'
+  
   totalPrincipalInCents   Int
-  interestRate            Float // e.g. 5.5 for 5.5%
+  emiInCents              Int?     // Optional for informal debts without a fixed EMI
+  interestRate            Float    // e.g. 5.5 for 5.5%
   remainingBalanceInCents Int
+  
+  dueDate                 String?  // Stored as 'YYYY-MM-DD' or simple day string '15'
+  
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }
