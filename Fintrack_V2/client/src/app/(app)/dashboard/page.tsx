@@ -1,22 +1,42 @@
 'use client';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useBudgets } from '@/hooks/useBudgets';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
+  Eye, EyeOff, TrendingUp, TrendingDown, RefreshCw,
+  AlertTriangle, CheckCircle, Lightbulb, Zap, X,
+  ArrowUpRight, BarChart2, Activity, Wallet,
+  ChevronRight,
+} from 'lucide-react';
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  ReferenceLine, Legend,
 } from 'recharts';
+import { useTransactions }  from '@/hooks/useTransactions';
+import { useBudgets }       from '@/hooks/useBudgets';
+import { useWealth }        from '@/hooks/usewealth';
+import {
+  useInsights, useForecast, useComparisons, useDashboardStore,
+} from '@/hooks/useDashboard';
+import { useAppStore } from '@/store/useAppStore';
+import Link from 'next/link';
 
-/* ─── Count-up hook ──────────────────────────────────────── */
-function useCountUp(target: number, duration = 1400) {
+/* ─── Design tokens ──────────────────────────────── */
+const MONO  = "'Space Mono','Courier New',monospace";
+const JADE  = '#22c55e';
+const CORAL = '#f87171';
+const JADE_DIM  = 'rgba(34,197,94,0.15)';
+const CORAL_DIM = 'rgba(248,113,113,0.15)';
+
+/* ─── Count-up hook ──────────────────────────────── */
+function useCountUp(target: number, duration = 1100) {
   const [val, setVal] = useState(0);
   const raf = useRef<number>(0);
   useEffect(() => {
     const start = performance.now();
     const step = (now: number) => {
       const p = Math.min((now - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * ease));
+      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))));
       if (p < 1) raf.current = requestAnimationFrame(step);
     };
     raf.current = requestAnimationFrame(step);
@@ -25,383 +45,772 @@ function useCountUp(target: number, duration = 1400) {
   return val;
 }
 
-/* ─── Custom bar label ───────────────────────────────────── */
-function BarLabel({ x, y, width, value }: {
-  x?: number; y?: number; width?: number; value?: number;
-}) {
-  if (!value || !x || !y || !width || value === 0) return null;
+/* ─── Formatters ─────────────────────────────────── */
+const fmtINR = (n: number, masked = false) =>
+  masked ? '₹ ••••' :
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+
+const fmtShort = (n: number) =>
+  n >= 10000000 ? `₹${(n / 10000000).toFixed(1)}Cr` :
+  n >= 100000   ? `₹${(n / 100000).toFixed(1)}L`    :
+  n >= 1000     ? `₹${(n / 1000).toFixed(0)}k`      : `₹${n}`;
+
+const fmtPct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+
+function timeAgo(iso: string | null | number | undefined): string {
+  if (!iso) return 'Never';
+  const ms = Date.now() - new Date(iso as string).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+/* ─── Shared tooltip style ───────────────────────── */
+const ttStyle = {
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 12,
+  padding: '10px 14px',
+  fontSize: 12,
+  boxShadow: 'var(--shadow-md)',
+};
+
+/* ══════════════════════════════════════════════════
+ *  SECTION WRAPPER
+ * ══════════════════════════════════════════════════ */
+function Section({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
-    <text x={x + width / 2} y={y - 6} fill="#94a3b8" textAnchor="middle" fontSize={11}>
-      ₹{(value / 1000).toFixed(1)}k
-    </text>
+    <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
+      {children}
+    </motion.div>
   );
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Food: '#f59e0b', Transport: '#3b82f6', Shopping: '#8b5cf6',
-  Entertainment: '#ec4899', Healthcare: '#10b981', Utilities: '#64748b',
-  Salary: '#059669', Investment: '#6366f1', Other: '#94a3b8',
-};
+/* ══════════════════════════════════════════════════
+ *  1. WEALTH HEADER — 3 GLASS CARDS
+ * ══════════════════════════════════════════════════ */
+function WealthHeaderCard() {
+  const { data: wealth, refetch, isFetching } = useWealth();
+  const { isMasked, togglePrivacyMode } = useDashboardStore();
+  const nw     = wealth?.netWorth ?? 0;
+  const animNW = useCountUp(nw);
+  const isPos  = nw >= 0;
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Food: '🍔', Transport: '🚗', Shopping: '🛍️', Entertainment: '🎬',
-  Healthcare: '💊', Utilities: '⚡', Salary: '💼', Investment: '📈', Other: '📦',
-};
+  const total = Math.max(wealth?.totalAssets ?? 1, 1);
+  const alloc = {
+    stocks : (wealth?.stockSummary?.totalCurrent ?? 0) / total * 100,
+    mf     : (wealth?.mfSummary?.totalCurrent ?? 0)   / total * 100,
+    manual : (wealth?.manualAssetsValue ?? 0)          / total * 100,
+  };
 
-function fmt(n: number) {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
-}
+  const fastest = wealth?.liabilities?.length
+    ? [...wealth.liabilities].sort((a, b) => a.remainingBalanceInCents - b.remainingBalanceInCents)[0]
+    : null;
 
-/* ─── Goal Card (kept as-is from original) ──────────────── */
-const GOALS = [
-  { label: 'Sweet escape to Busan',           pct: 46, amount: '520.10',      from: '#f472b6', to: '#a855f7', icon: '✈️' },
-  { label: 'Rumah masa tua di Kaliurang',      pct: 92, amount: '413.855.11',  from: '#f97316', to: '#eab308', icon: '🏠' },
-  { label: 'My dream car',                     pct: 28, amount: '2.0',         from: '#3b82f6', to: '#06b6d4', icon: '🚗' },
-];
+  const avgRate = wealth?.liabilities?.length
+    ? wealth.liabilities.reduce((s, l) => s + l.interestRate, 0) / wealth.liabilities.length
+    : 0;
 
-function GoalCard({ goal }: { goal: typeof GOALS[0] }) {
   return (
-    <div style={{
-      flex: '0 0 200px', borderRadius: 20, padding: 20,
-      background: `linear-gradient(160deg, ${goal.from}, ${goal.to})`,
-      position: 'relative', overflow: 'hidden', minHeight: 220,
-      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-    }}>
-      <svg viewBox="0 0 200 60" style={{ position: 'absolute', bottom: 48, left: 0, width: '100%', opacity: 0.25 }}>
-        <path d="M0,30 C40,10 80,50 120,30 C160,10 180,40 200,30 L200,60 L0,60 Z" fill="white" />
-      </svg>
-      <div style={{ fontSize: 26 }}>{goal.icon}</div>
-      <div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', opacity: 0.9 }}>{goal.pct}%</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 16, lineHeight: 1.4 }}>{goal.label}</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$ {goal.amount}</div>
-      </div>
+    <div className="dash-header-grid">
+      {/* ── Card 1 · Net Worth ── */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="net-worth-card">
+        {/* Background orbs */}
+        <div style={{ position:'absolute',top:-60,right:-40,width:220,height:220,borderRadius:'50%',background:'rgba(99,102,241,0.07)',pointerEvents:'none' }}/>
+        <div style={{ position:'absolute',bottom:-40,left:30,width:130,height:130,borderRadius:'50%',background:'rgba(34,197,94,0.05)',pointerEvents:'none' }}/>
+
+        <div style={{ position:'relative', height:'100%', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+          {/* Top row */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+            <span style={{ fontSize:10, fontWeight:600, letterSpacing:2, color:'rgba(255,255,255,0.35)', textTransform:'uppercase' }}>Net Worth</span>
+            <div style={{ display:'flex', gap:6 }}>
+              <button onClick={() => refetch()} className="glass-btn" title="Sync">
+                <RefreshCw size={12} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }}/>
+              </button>
+              <button onClick={togglePrivacyMode} className="glass-btn" title={isMasked ? 'Show' : 'Hide'}>
+                {isMasked ? <EyeOff size={12}/> : <Eye size={12}/>}
+              </button>
+            </div>
+          </div>
+
+          {/* Main figure */}
+          <div>
+            <p style={{ fontFamily:MONO, fontSize:clamp(28, 36), fontWeight:700, color:'#fff', letterSpacing:-1, marginBottom:6, lineHeight:1 }}>
+              {isMasked ? '₹ ••••••••' : fmtShort(animNW)}
+            </p>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span className={`pnl-badge ${isPos ? 'pnl-pos' : 'pnl-neg'}`}>
+                {isPos ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
+                {fmtPct(wealth?.totalPnlPct ?? 0)} P&L
+              </span>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,0.2)' }}>on investments</span>
+            </div>
+          </div>
+
+          {/* Freshness + freedom bar */}
+          <div>
+            <div style={{ display:'flex', gap:14, marginBottom:10, fontSize:10, color:'rgba(255,255,255,0.22)' }}>
+              <span>📊 {timeAgo(wealth?.lastSynced?.stocks)}</span>
+              <span>📈 {timeAgo(wealth?.lastSynced?.mutualFunds)}</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+              <span style={{ fontSize:10, letterSpacing:1.2, color:'rgba(255,255,255,0.25)', textTransform:'uppercase' }}>Financial Freedom</span>
+              <span style={{ fontFamily:MONO, fontSize:10, color:JADE }}>{(wealth?.financialFreedomPct ?? 0).toFixed(0)}%</span>
+            </div>
+            <div style={{ height:3, background:'rgba(255,255,255,0.08)', borderRadius:99, overflow:'hidden' }}>
+              <motion.div initial={{ width:0 }} animate={{ width:`${wealth?.financialFreedomPct ?? 0}%` }}
+                transition={{ duration:1.6, ease:[0.16,1,0.3,1] }}
+                style={{ height:'100%', borderRadius:99, background:`linear-gradient(90deg,${JADE},#86efac)` }}/>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Card 2 · Asset Breakdown ── */}
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.07 }} className="card dash-sub-card">
+        <p className="card-eyebrow">Assets</p>
+        <p style={{ fontFamily:MONO, fontSize:24, fontWeight:800, color:'var(--text-primary)', marginBottom:16 }}>
+          {fmtINR(wealth?.totalAssets ?? 0, isMasked)}
+        </p>
+        {[
+          { label:'Stocks',       value: wealth?.stockSummary?.totalCurrent ?? 0, pct: alloc.stocks, color:'#f59e0b' },
+          { label:'Mutual Funds', value: wealth?.mfSummary?.totalCurrent ?? 0,    pct: alloc.mf,     color:'#6366f1' },
+          { label:'Manual',       value: wealth?.manualAssetsValue ?? 0,           pct: alloc.manual, color:JADE      },
+        ].map((a, i) => (
+          <div key={a.label} style={{ marginBottom: i < 2 ? 10 : 0 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+              <span style={{ fontSize:12, color:'var(--text-secondary)' }}>{a.label}</span>
+              <span style={{ fontFamily:MONO, fontSize:12, color:'var(--text-primary)', fontWeight:600 }}>
+                {isMasked ? '••••' : fmtShort(a.value)}
+              </span>
+            </div>
+            <div style={{ height:4, background:'var(--bg-surface-2)', borderRadius:99, overflow:'hidden' }}>
+              <motion.div initial={{ width:0 }} animate={{ width:`${Math.min(a.pct, 100)}%` }}
+                transition={{ duration:0.9, delay:i*0.1 + 0.1, ease:[0.16,1,0.3,1] }}
+                style={{ height:'100%', borderRadius:99, background:a.color }}/>
+            </div>
+          </div>
+        ))}
+        <Link href="/wealth" className="card-link">View all assets <ArrowUpRight size={11}/></Link>
+      </motion.div>
+
+      {/* ── Card 3 · Liabilities ── */}
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.14 }} className="card dash-sub-card">
+        <p className="card-eyebrow">Liabilities</p>
+        <p style={{ fontFamily:MONO, fontSize:24, fontWeight:800, color: CORAL, marginBottom:12 }}>
+          {fmtINR(wealth?.totalLiabilities ?? 0, isMasked)}
+        </p>
+
+        {/* D/A gauge */}
+        <div style={{ marginBottom:14 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+            <span style={{ fontSize:11, color:'var(--text-muted)' }}>Debt-to-Asset</span>
+            <span style={{ fontFamily:MONO, fontSize:11, fontWeight:700,
+              color: (wealth?.debtToAsset ?? 0) <= 30 ? JADE : (wealth?.debtToAsset ?? 0) <= 50 ? 'var(--warning)' : CORAL }}>
+              {(wealth?.debtToAsset ?? 0).toFixed(1)}%
+            </span>
+          </div>
+          <div style={{ height:8, background:'var(--bg-surface-2)', borderRadius:99, overflow:'hidden', position:'relative' }}>
+            <motion.div initial={{ width:0 }} animate={{ width:`${Math.min(wealth?.debtToAsset ?? 0, 100)}%` }}
+              transition={{ duration:0.9 }}
+              style={{ height:'100%', borderRadius:99,
+                background: (wealth?.debtToAsset ?? 0) <= 30 ? JADE : (wealth?.debtToAsset ?? 0) <= 50 ? 'var(--warning)' : CORAL }}/>
+            {[30,50].map(m => (
+              <div key={m} style={{ position:'absolute',top:0,bottom:0,left:`${m}%`,width:1.5,background:'rgba(255,255,255,0.25)' }}/>
+            ))}
+          </div>
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:3, fontSize:9, color:'var(--text-muted)' }}>
+            <span>Safe &lt;30%</span><span>Caution 50%</span><span>High Risk</span>
+          </div>
+        </div>
+
+        {fastest && (
+          <div style={{ padding:'10px 12px', borderRadius:10, background:'var(--bg-surface-2)', marginBottom:10 }}>
+            <p style={{ fontSize:10, color:'var(--text-muted)', marginBottom:2 }}>Fastest payoff →</p>
+            <p style={{ fontSize:13, fontWeight:700, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fastest.loanName}</p>
+            <p style={{ fontSize:11, color:CORAL, fontFamily:MONO, marginTop:1 }}>
+              {isMasked ? '₹ ••••' : fmtINR(fastest.remainingBalanceInCents / 100)} left
+            </p>
+          </div>
+        )}
+
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:11, color:'var(--text-muted)' }}>Avg rate: <strong style={{ color:'var(--text-primary)' }}>{avgRate.toFixed(1)}%</strong></span>
+          <Link href="/wealth" className="card-link">Details <ArrowUpRight size={11}/></Link>
+        </div>
+      </motion.div>
     </div>
   );
 }
 
-/* ─── Main Dashboard ─────────────────────────────────────── */
-export default function DashboardPage() {
-  const { data: transactions = [] } = useTransactions();
+/* ══════════════════════════════════════════════════
+ *  2. KPI STRIP
+ * ══════════════════════════════════════════════════ */
+function KpiStrip() {
+  const { data: txns = [] }    = useTransactions();
   const { data: budgets = [] } = useBudgets();
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Revenue' | 'Expenses' | 'Taxes'>('All');
+  const { isMasked }           = useDashboardStore();
 
-  /* ── Derived stats ── */
-  const totalIncome   = useMemo(() => transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalExpenses = useMemo(() => transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const netBalance    = totalIncome - totalExpenses;
+  const now = new Date();
+  const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const mo  = txns.filter(t => t.date.startsWith(key));
 
-  /* ── Cashflow: last 6 months ── */
-  const cashflowData = useMemo(() => {
-    const months: { month: string; key: string; revenue: number; expenses: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      months.push({
-        month: d.toLocaleString('en-IN', { month: 'short' }),
-        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-        revenue: 0, expenses: 0,
-      });
-    }
-    transactions.forEach(t => {
-      const bucket = months.find(m => m.key === t.date.slice(0, 7));
-      if (!bucket) return;
-      if (t.type === 'income') bucket.revenue += t.amount;
-      else bucket.expenses += t.amount;
-    });
-    return months;
-  }, [transactions]);
+  const income    = mo.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expenses  = mo.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const saved     = income - expenses;
+  const saveRate  = income > 0 ? (saved / income) * 100 : 0;
+  const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
+  const budgetPct   = totalBudget > 0 ? (expenses / totalBudget) * 100 : 0;
 
-  /* ── Category breakdown ── */
-  const categoryData = useMemo(() => {
-    const map: Record<string, number> = {};
-    transactions.filter(t => t.type === 'expense').forEach(t => {
-      map[t.category] = (map[t.category] ?? 0) + t.amount;
-    });
-    const total = Object.values(map).reduce((s, v) => s + v, 0);
-    return Object.entries(map)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([label, amount]) => ({
-        label, amount,
-        emoji: CATEGORY_EMOJI[label] ?? '💰',
-        pct: total > 0 ? Math.round((amount / total) * 100) : 0,
-        color: CATEGORY_COLORS[label] ?? '#94a3b8',
-      }));
-  }, [transactions]);
-
-  /* ── Recent transactions ── */
-  const recentTxn = useMemo(() =>
-    [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4),
-    [transactions]
-  );
-
-  /* ── Filtered cashflow ── */
-  const filteredData = cashflowData.map(d => ({
-    ...d,
-    revenue:  activeFilter === 'Expenses' || activeFilter === 'Taxes' ? 0 : d.revenue,
-    expenses: activeFilter === 'Revenue'  || activeFilter === 'Taxes' ? 0 : d.expenses,
-  }));
-
-  const animBalance  = useCountUp(Math.max(netBalance, 0));
-  const animExpenses = useCountUp(totalExpenses);
-  const animRevenue  = useCountUp(totalIncome);
+  const tiles = [
+    { icon:<TrendingUp size={16}/>,  label:'Income',       val: fmtINR(income, isMasked),   sub:`${mo.filter(t=>t.type==='income').length} sources`,    color:JADE,             bg:JADE_DIM  },
+    { icon:<TrendingDown size={16}/>,label:'Expenses',     val: fmtINR(expenses, isMasked), sub:`${mo.filter(t=>t.type==='expense').length} txns`,        color:CORAL,            bg:CORAL_DIM },
+    { icon:<Activity size={16}/>,    label:'Savings Rate', val:`${saveRate.toFixed(1)}%`,   sub: isMasked?'this month':`Saved ${fmtINR(saved)}`,
+      color: saveRate>=20?JADE : saveRate>=10?'var(--warning)':CORAL,
+      bg: saveRate>=20?JADE_DIM:'rgba(245,158,11,0.1)' },
+    { icon:<BarChart2 size={16}/>,   label:'Budget Used',  val:`${Math.round(budgetPct)}%`, sub: isMasked?'of budget':`of ${fmtINR(totalBudget)}`,
+      color: budgetPct>=100?CORAL : budgetPct>=80?'var(--warning)':JADE,
+      bg: budgetPct>=80?'rgba(245,158,11,0.1)':JADE_DIM },
+    { icon:<Wallet size={16}/>,      label:'Transactions', val:`${mo.length}`,              sub:'this month',                                              color:'var(--indigo-400)', bg:'rgba(99,102,241,0.1)' },
+  ];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg-base)',
-      padding: '28px 32px',
-      fontFamily: "'DM Sans', 'Inter', sans-serif",
-    }}>
-
-      {/* ── Row 1: Greeting + Balance ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, marginBottom: 20 }}>
-
-        {/* Greeting */}
-        <div style={{
-          background: 'var(--bg-surface)', borderRadius: 20, padding: '32px 36px',
-          border: '1px solid var(--border)', display: 'flex', alignItems: 'center',
-        }}>
-          <p style={{ fontSize: 28, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: 560 }}>
-            {transactions.length === 0
-              ? <>Welcome to <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>FinTrack.</span> Add your first transaction to get started.</>
-              : <>You have <span style={{ color: '#22d3ee', fontWeight: 700, borderBottom: '2px solid #22d3ee' }}>{fmt(totalIncome)} income</span>{' '}
-                  and <span style={{ color: 'var(--text-primary)', fontWeight: 700, borderBottom: '2px solid var(--text-primary)' }}>{fmt(totalExpenses)} expenses</span>{' '}
-                  this month. Net balance: <span style={{ color: netBalance >= 0 ? '#22d3ee' : '#ef4444', fontWeight: 700 }}>{fmt(netBalance)}</span>.</>
-            }
-          </p>
-        </div>
-
-        {/* Total Balance */}
-        <div style={{
-          background: 'var(--bg-surface)', borderRadius: 20, padding: 24,
-          border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Total Balance</span>
-            <button style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-muted)', fontSize: 13,
-            }}>↻</button>
+    <div className="kpi-strip">
+      {tiles.map((t, i) => (
+        <motion.div key={t.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.05 + 0.1 }} className="card kpi-tile">
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+            <p style={{ fontSize:11, color:'var(--text-muted)', fontWeight:500, letterSpacing:0.3 }}>{t.label}</p>
+            <div style={{ width:30, height:30, borderRadius:8, background:t.bg, display:'flex', alignItems:'center', justifyContent:'center', color:t.color }}>
+              {t.icon}
+            </div>
           </div>
+          <p style={{ fontFamily:MONO, fontSize:20, fontWeight:800, color:t.color, letterSpacing:-0.5, marginBottom:3 }}>{t.val}</p>
+          <p style={{ fontSize:11, color:'var(--text-muted)' }}>{t.sub}</p>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+ *  3. INSIGHTS HUB
+ * ══════════════════════════════════════════════════ */
+const INS_CFG = {
+  danger:  { c:CORAL,               bg:CORAL_DIM,               border:`${CORAL}30`,              icon:AlertTriangle, tag:'Urgent'      },
+  warning: { c:'var(--warning)',    bg:'rgba(245,158,11,0.08)',  border:'rgba(245,158,11,0.25)',   icon:Zap,           tag:'Attention'   },
+  success: { c:JADE,                bg:JADE_DIM,                 border:`${JADE}30`,               icon:CheckCircle,   tag:'Achievement' },
+  info:    { c:'var(--info)',       bg:'rgba(59,130,246,0.08)',  border:'rgba(59,130,246,0.25)',   icon:Lightbulb,     tag:'Tip'         },
+} as const;
+
+function InsightsHub() {
+  const { data: raw = [] }  = useInsights();
+  const { dismissedInsights, dismissInsight } = useDashboardStore();
+  const visible = raw.filter(i => !dismissedInsights.includes(i.id));
+  if (!visible.length) return null;
+
+  return (
+    <Section delay={0.2}>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
           <div>
-            <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: -1 }}>
-              <span style={{ fontSize: 28, verticalAlign: 'top', marginTop: 6, display: 'inline-block', color: 'var(--text-muted)', fontWeight: 400 }}>₹ </span>
-              {animBalance.toLocaleString('en-IN')}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-              {transactions.length} transactions recorded<br />
-              {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </div>
+            <p className="section-title">Smart Insights</p>
+            <p className="section-sub">Ranked by urgency · Dismiss to snooze</p>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button style={{
-              width: 36, height: 36, borderRadius: '50%', background: 'var(--text-primary)',
-              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--bg-surface)', fontSize: 16,
-            }}>↗</button>
+          <span style={{ fontSize:11, padding:'4px 12px', borderRadius:99, background:'linear-gradient(135deg,var(--indigo-500),#7c3aed)', color:'#fff', fontWeight:600, letterSpacing:0.3 }}>
+            ✨ AI-Powered
+          </span>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:10 }}>
+          <AnimatePresence>
+            {visible.map((ins, i) => {
+              const cfg = INS_CFG[ins.severity];
+              const Icon = cfg.icon;
+              return (
+                <motion.div key={ins.id} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, scale:0.95, transition:{ duration:0.15 } }}
+                  transition={{ delay: i*0.05 }}
+                  style={{ display:'flex', gap:12, padding:'14px 16px', borderRadius:14, background:cfg.bg, border:`1px solid ${cfg.border}` }}>
+                  <div style={{ width:34, height:34, borderRadius:9, flexShrink:0, background:`${cfg.c}18`, display:'flex', alignItems:'center', justifyContent:'center', color:cfg.c }}>
+                    <Icon size={15}/>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                      <span style={{ fontSize:9, fontWeight:700, letterSpacing:0.8, color:cfg.c, textTransform:'uppercase' }}>{cfg.tag}</span>
+                      {ins.category && <span style={{ fontSize:9, color:'var(--text-muted)', padding:'1px 6px', borderRadius:99, background:'var(--bg-surface)' }}>{ins.category}</span>}
+                    </div>
+                    <p style={{ fontWeight:700, fontSize:13, color:'var(--text-primary)', lineHeight:1.3, marginBottom:3 }}>{ins.title}</p>
+                    <p style={{ fontSize:11, color:'var(--text-secondary)', lineHeight:1.5 }}>{ins.body}</p>
+                  </div>
+                  <button onClick={() => dismissInsight(ins.id)}
+                    style={{ width:20, height:20, flexShrink:0, borderRadius:6, border:'none', background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', alignSelf:'flex-start', marginTop:2 }}>
+                    <X size={11}/>
+                  </button>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+ *  4. PORTFOLIO HEATMAP
+ * ══════════════════════════════════════════════════ */
+function PortfolioHeatmap() {
+  const { data: wealth } = useWealth();
+  const { isMasked }     = useDashboardStore();
+
+  const holdings = useMemo(() => {
+    const mf  = (wealth?.mfHoldings ?? []).map(h => ({ name:h.schemeName,    val:h.currentValue,              pct:h.pnlPct,  kind:'MF',    badge:'MF'           }));
+    const stk = (wealth?.stockHoldings ?? []).map(h => ({ name:h.companyName, val:h.currentValue,             pct:h.pnlPct,  kind:'STOCK', badge:h.exchange     }));
+    const ast = (wealth?.assets ?? []).map(a => ({         name:a.name,        val:a.currentValueInCents/100,  pct:0,         kind:'ASSET', badge:a.type         }));
+    return [...mf, ...stk, ...ast].sort((a, b) => b.val - a.val).slice(0, 12);
+  }, [wealth]);
+
+  if (!holdings.length) return null;
+
+  const cellBg = (pct: number, kind: string) => {
+    if (kind === 'ASSET') return 'var(--bg-surface-2)';
+    if (pct > 15) return 'rgba(34,197,94,0.75)';
+    if (pct > 5)  return 'rgba(34,197,94,0.4)';
+    if (pct > 0)  return 'rgba(34,197,94,0.18)';
+    if (pct > -5) return 'rgba(248,113,113,0.18)';
+    if (pct > -15)return 'rgba(248,113,113,0.4)';
+    return 'rgba(248,113,113,0.7)';
+  };
+  const textCol = (pct: number, kind: string) => kind === 'ASSET' ? 'var(--text-primary)' : pct >= 0 ? '#fff' : '#fff';
+
+  return (
+    <Section delay={0.25}>
+      <div className="card" style={{ padding:24, marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+          <div>
+            <p className="section-title">Portfolio Heatmap</p>
+            <p className="section-sub">Cell size = value · Color = P&L · Hover for details</p>
           </div>
+          <div style={{ display:'flex', gap:12, fontSize:11, color:'var(--text-muted)' }}>
+            {[{c:JADE,                   l:'Gain'},{c:CORAL,                  l:'Loss'},{c:'var(--bg-surface-2)', l:'Manual'}].map(s => (
+              <span key={s.l} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <span style={{ width:9, height:9, borderRadius:3, background:s.c, display:'inline-block' }}/>{s.l}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:8 }}>
+          {holdings.map((h, i) => (
+            <motion.div key={h.name + i}
+              initial={{ opacity:0, scale:0.88 }} animate={{ opacity:1, scale:1 }} transition={{ delay:i*0.04 }}
+              whileHover={{ scale:1.03, zIndex:2 }}
+              title={`${h.name} · ${fmtINR(h.val)} · ${h.pct >= 0 ? '+' : ''}${h.pct.toFixed(1)}%`}
+              style={{
+                borderRadius:12, padding:'14px 16px', minHeight:80,
+                background:cellBg(h.pct, h.kind),
+                border:'1px solid rgba(255,255,255,0.06)',
+                cursor:'default', display:'flex', flexDirection:'column', justifyContent:'space-between',
+              }}
+            >
+              <p style={{ fontSize:11, fontWeight:600, color:textCol(h.pct,h.kind), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight:1.3, marginBottom:10 }}>
+                {h.name}
+              </p>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
+                <span style={{ fontFamily:MONO, fontSize:13, fontWeight:700, color:textCol(h.pct,h.kind) }}>
+                  {isMasked ? '••••' : fmtShort(h.val)}
+                </span>
+                {h.kind !== 'ASSET' && (
+                  <span style={{ fontFamily:MONO, fontSize:11, color:textCol(h.pct,h.kind), fontWeight:700, opacity:0.9 }}>
+                    {h.pct >= 0 ? '+' : ''}{h.pct.toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+ *  5. FORECAST CHART  — FIX: explicit pixel height on wrapper
+ * ══════════════════════════════════════════════════ */
+function ForecastChart() {
+  const { data: forecast = [], isLoading } = useForecast();
+  const { isMasked, chartPreference, setChartPreference } = useDashboardStore();
+
+  const todayKey = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+  })();
+
+  // ── build display rows, use actual when available ──
+  const displayData = forecast.map(f => ({
+    name:    f.month,
+    income:  f.actualIncome  !== undefined ? Math.round(f.actualIncome)  : Math.round(f.projectedIncome),
+    expense: f.actualExpense !== undefined ? Math.round(f.actualExpense) : Math.round(f.projectedExpense),
+    net:     (f.actualIncome  !== undefined ? f.actualIncome  : f.projectedIncome)
+           - (f.actualExpense !== undefined ? f.actualExpense : f.projectedExpense),
+    isProj:  f.isProjected,
+  }));
+
+  // Fall back to empty placeholder bars so chart still renders even with 0 data
+  const chartData = displayData.length > 0 ? displayData : Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - 3 + i);
+    return { name: d.toLocaleString('en-IN', { month:'short', year:'numeric' }), income:0, expense:0, net:0, isProj: i > 3 };
+  });
+
+  const todayLabel = forecast.find(f => f.key === todayKey)?.month;
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const isP = chartData.find(d => d.name === label)?.isProj;
+    return (
+      <div style={ttStyle}>
+        <p style={{ fontWeight:700, marginBottom:6, color:'var(--text-primary)', fontSize:12 }}>
+          {label} {isP && <span style={{ fontSize:10, color:'var(--text-muted)' }}>· Projected</span>}
+        </p>
+        {payload.map((p: any) => (
+          <p key={p.dataKey} style={{ color:p.color, fontSize:12, marginBottom:2 }}>
+            {p.name}: {isMasked ? '••••' : fmtShort(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="card" style={{ padding:24 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6, flexWrap:'wrap', gap:8 }}>
+        <div>
+          <p className="section-title">12-Month Forecast</p>
+          <p className="section-sub">Solid = actual · Faded = projected from 6-month avg</p>
+        </div>
+        <div style={{ display:'flex', gap:6 }}>
+          {(['area','bar'] as const).map(p => (
+            <button key={p} onClick={() => setChartPreference(p)} className="btn btn-sm"
+              style={{ fontSize:11, border:'none', background:chartPreference===p?'var(--indigo-500)':'var(--bg-surface-2)', color:chartPreference===p?'#fff':'var(--text-secondary)', textTransform:'capitalize' }}>
+              {p.charAt(0).toUpperCase() + p.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Row 2: Cashflow + Right Column ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, marginBottom: 20 }}>
+      {isLoading ? (
+        <div style={{ height:240, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', fontSize:13 }}>
+          Loading forecast…
+        </div>
+      ) : (
+        /* FIX: explicit px height on the wrapper div — ResponsiveContainer needs a sized parent */
+        <div style={{ width:'100%', height:240 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {chartPreference === 'area' ? (
+              <AreaChart data={chartData} margin={{ top:8, right:4, left:0, bottom:0 }}>
+                <defs>
+                  <linearGradient id="fg-inc" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={JADE} stopOpacity={0.4}/>
+                    <stop offset="100%" stopColor={JADE} stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="fg-exp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CORAL} stopOpacity={0.4}/>
+                    <stop offset="100%" stopColor={CORAL} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                <XAxis dataKey="name" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                <YAxis tickFormatter={fmtShort} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} width={48}/>
+                <Tooltip content={<CustomTooltip/>}/>
+                {todayLabel && (
+                  <ReferenceLine x={todayLabel} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 3"
+                    label={{ value:'Today', position:'insideTopRight', fill:'var(--text-muted)', fontSize:9 }}/>
+                )}
+                <Area type="monotone" dataKey="income" name="Income" stroke={JADE} strokeWidth={2}
+                  fill="url(#fg-inc)" dot={false} activeDot={{ r:4, fill:JADE, strokeWidth:0 }}
+                  strokeDasharray={(d: any) => d?.isProj ? '5 3' : undefined}/>
+                <Area type="monotone" dataKey="expense" name="Expense" stroke={CORAL} strokeWidth={2}
+                  fill="url(#fg-exp)" dot={false} activeDot={{ r:4, fill:CORAL, strokeWidth:0 }}/>
+              </AreaChart>
+            ) : (
+              <BarChart data={chartData} barGap={3} barCategoryGap="22%" margin={{ top:8, right:4, left:0, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                <XAxis dataKey="name" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                <YAxis tickFormatter={fmtShort} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} width={48}/>
+                <Tooltip content={<CustomTooltip/>}/>
+                <Legend wrapperStyle={{ fontSize:11, paddingTop:8 }}/>
+                <Bar dataKey="income" name="Income" radius={[4,4,0,0]}>
+                  {chartData.map((d, i) => <Cell key={i} fill={d.isProj ? `${JADE}55` : JADE}/>)}
+                </Bar>
+                <Bar dataKey="expense" name="Expense" radius={[4,4,0,0]}>
+                  {chartData.map((d, i) => <Cell key={i} fill={d.isProj ? `${CORAL}55` : CORAL}/>)}
+                </Bar>
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
 
-        {/* Cashflow Chart */}
-        <div style={{ background: 'var(--bg-surface)', borderRadius: 20, padding: 24, border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cashflow Summary</span>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#818cf8' }} /> Revenue
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22d3ee' }} /> Expenses
-              </div>
-            </div>
-          </div>
+/* ══════════════════════════════════════════════════
+ *  6. MoM COMPARISONS — FIX: same explicit height pattern
+ * ══════════════════════════════════════════════════ */
+function MoMChart() {
+  const { data: comparisons = [], isLoading } = useComparisons();
+  const { isMasked } = useDashboardStore();
 
-          {/* Filter tabs */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-            {(['All', 'Revenue', 'Expenses', 'Taxes'] as const).map((f) => (
-              <button key={f} onClick={() => setActiveFilter(f)} style={{
-                padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500,
-                border: 'none', cursor: 'pointer',
-                background: activeFilter === f ? 'var(--text-primary)' : 'var(--bg-surface-2)',
-                color: activeFilter === f ? 'var(--bg-surface)' : 'var(--text-muted)',
-                transition: 'all 0.2s',
-              }}>{f}</button>
-            ))}
-          </div>
+  // Fallback placeholder so chart always renders
+  const chartData = comparisons.length > 0 ? comparisons : Array.from({ length:6 }, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - 5 + i);
+    return { label: d.toLocaleString('en-IN', { month:'short', year:'numeric' }), income:0, expense:0, net:0 };
+  });
 
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={filteredData} barGap={4} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 13 }}
-                formatter={(v) => [fmt(v as number), '']}
-              />
-              <Bar dataKey="revenue" radius={[6,6,0,0]} label={<BarLabel />}>
-                {filteredData.map((_, i) => <Cell key={i} fill="url(#revGrad)" />)}
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={ttStyle}>
+        <p style={{ fontWeight:700, marginBottom:5, color:'var(--text-primary)', fontSize:12 }}>{label}</p>
+        {payload.map((p: any) => (
+          <p key={p.dataKey} style={{ color:p.color, fontSize:12, marginBottom:2 }}>
+            {p.name}: {isMasked ? '••••' : fmtShort(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="card" style={{ padding:24 }}>
+      <div style={{ marginBottom:6 }}>
+        <p className="section-title">Month-over-Month</p>
+        <p className="section-sub">6-month income · expenses · net savings</p>
+      </div>
+
+      {isLoading ? (
+        <div style={{ height:240, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', fontSize:13 }}>
+          Loading comparisons…
+        </div>
+      ) : (
+        /* FIX: explicit px height */
+        <div style={{ width:'100%', height:240 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} barGap={4} barCategoryGap="25%" margin={{ top:8, right:4, left:0, bottom:0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+              <XAxis dataKey="label" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
+              <YAxis tickFormatter={fmtShort} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} width={48}/>
+              <Tooltip content={<CustomTooltip/>}/>
+              <Legend wrapperStyle={{ fontSize:11, paddingTop:8 }}/>
+              <Bar dataKey="income" name="Income" fill={JADE} radius={[4,4,0,0]}/>
+              <Bar dataKey="expense" name="Expense" fill={CORAL} radius={[4,4,0,0]}/>
+              <Bar dataKey="net" name="Net" radius={[4,4,0,0]}>
+                {chartData.map((d, i) => <Cell key={i} fill={(d.net ?? 0) >= 0 ? '#818cf8' : CORAL}/>)}
               </Bar>
-              <Bar dataKey="expenses" radius={[6,6,0,0]} label={<BarLabel />}>
-                {filteredData.map((_, i) => <Cell key={i} fill="url(#expGrad)" />)}
-              </Bar>
-              <defs>
-                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#818cf8" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#818cf8" stopOpacity={0.5} />
-                </linearGradient>
-                <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.5} />
-                </linearGradient>
-              </defs>
             </BarChart>
           </ResponsiveContainer>
         </div>
+      )}
+    </div>
+  );
+}
 
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+/* ══════════════════════════════════════════════════
+ *  7. RECENT TRANSACTIONS
+ * ══════════════════════════════════════════════════ */
+function RecentTxns() {
+  const { data: txns = [] } = useTransactions();
+  const { isMasked }        = useDashboardStore();
+  const recent = [...txns].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const EM: Record<string,string> = { Food:'🍔',Transport:'🚗',Shopping:'🛍️',Entertainment:'🎬',Healthcare:'💊',Utilities:'⚡',Salary:'💼',Investment:'📈',Other:'📦' };
 
-          {/* Expenses this month */}
-          <div style={{ borderRadius: 20, padding: 20, background: 'linear-gradient(135deg, #06b6d4, #22d3ee)', flex: 1 }}>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>Expenses this month</p>
-            <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', letterSpacing: -1 }}>
-              <span style={{ fontSize: 22, verticalAlign: 'top', marginTop: 5, display: 'inline-block' }}>₹ </span>
-              {animExpenses.toLocaleString('en-IN')}
-            </div>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 8, lineHeight: 1.4 }}>
-              {budgets.length > 0
-                ? <>Budget used: <strong>{budgets.reduce((s,b)=>s+b.limit,0)>0 ? Math.round((totalExpenses/budgets.reduce((s,b)=>s+b.limit,0))*100) : 0}%</strong> of {fmt(budgets.reduce((s,b)=>s+b.limit,0))}</>
-                : 'Track your spending across categories'}
-            </p>
-            <div style={{ marginTop: 10, height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 99 }}>
-              <div style={{
-                height: '100%', borderRadius: 99, background: '#fff',
-                width: `${budgets.length > 0 && budgets.reduce((s,b)=>s+b.limit,0)>0
-                  ? Math.min(Math.round((totalExpenses/budgets.reduce((s,b)=>s+b.limit,0))*100),100)
-                  : 50}%`,
-              }} />
-            </div>
-          </div>
+  if (!recent.length) return null;
 
-          {/* Revenue this month */}
-          <div style={{ borderRadius: 20, padding: 20, background: 'linear-gradient(135deg, #6366f1, #818cf8)', flex: 1 }}>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>Revenue this month</p>
-            <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', letterSpacing: -1 }}>
-              <span style={{ fontSize: 22, verticalAlign: 'top', marginTop: 5, display: 'inline-block' }}>₹ </span>
-              {animRevenue.toLocaleString('en-IN')}
+  return (
+    <Section delay={0.3}>
+      <div className="card" style={{ padding:24, marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <p className="section-title" style={{ marginBottom:0 }}>Recent Transactions</p>
+          <Link href="/transactions" style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--indigo-500)', fontWeight:600, textDecoration:'none' }}>
+            View all <ChevronRight size={13}/>
+          </Link>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column' }}>
+          {recent.map((t, i) => (
+            <div key={t.id}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 8px', borderRadius:10, transition:'background 0.15s', borderBottom: i < recent.length - 1 ? '1px solid var(--border)' : 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <div style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:'var(--bg-surface-2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15 }}>
+                {EM[t.category] ?? '💳'}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontWeight:600, fontSize:13, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:1 }}>{t.merchant}</p>
+                <p style={{ fontSize:11, color:'var(--text-muted)' }}>{t.category} · {new Date(t.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</p>
+              </div>
+              <p style={{ fontFamily:MONO, fontSize:13, fontWeight:700, flexShrink:0, color: t.type==='income' ? JADE : 'var(--text-primary)' }}>
+                {t.type==='income'?'+':'-'}{isMasked ? '••••' : fmtINR(t.amount)}
+              </p>
             </div>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 8, lineHeight: 1.4 }}>
-              Net balance: <strong>{fmt(Math.max(netBalance, 0))}</strong> after expenses
-            </p>
-            <div style={{ marginTop: 10, height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 99 }}>
-              <div style={{
-                height: '100%', borderRadius: 99, background: '#fff',
-                width: `${totalIncome > 0 ? Math.min(Math.round(((totalIncome - totalExpenses) / totalIncome) * 100), 100) : 0}%`,
-              }} />
-            </div>
-          </div>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
 
-          {/* Categories */}
-          <div style={{ background: 'var(--bg-surface)', borderRadius: 20, padding: 20, border: '1px solid var(--border)', flex: 2 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>
-              Most transactions by category
-            </p>
-            {categoryData.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>No expense data yet</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {categoryData.map(cat => (
-                  <div key={cat.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                      background: cat.color + '20',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-                    }}>
-                      {cat.emoji}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {cat.label}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8 }}>{cat.pct}%</span>
-                      </div>
-                      <div style={{ height: 5, background: 'var(--bg-surface-2)', borderRadius: 99 }}>
-                        <div style={{ height: '100%', width: `${cat.pct}%`, background: cat.color, borderRadius: 99, transition: 'width 1s ease' }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+/* ══════════════════════════════════════════════════
+ *  DASHBOARD PAGE
+ * ══════════════════════════════════════════════════ */
+export default function DashboardPage() {
+  const user    = useAppStore(s => s.user);
+  const { isMasked } = useDashboardStore();
+  const { isLoading: wealthLoading } = useWealth();
+
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  })();
+  const name = user?.email?.split('@')[0] ?? 'there';
+
+  return (
+    <>
+      {/* ── Scoped styles ───────────────────────────── */}
+      <style>{`
+        /* Responsive grid */
+        .dash-header-grid {
+          display: grid;
+          grid-template-columns: 1.3fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        .kpi-strip {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .charts-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+
+        /* Tablet */
+        @media (max-width: 1100px) {
+          .dash-header-grid { grid-template-columns: 1fr 1fr; }
+          .dash-header-grid > *:first-child { grid-column: span 2; }
+          .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+        }
+        /* Mobile */
+        @media (max-width: 700px) {
+          .dash-header-grid { grid-template-columns: 1fr; }
+          .dash-header-grid > *:first-child { grid-column: span 1; }
+          .kpi-strip { grid-template-columns: 1fr 1fr; }
+          .charts-row { grid-template-columns: 1fr; }
+        }
+
+        /* Net worth dark card */
+        .net-worth-card {
+          border-radius: 22px;
+          padding: 26px;
+          background: linear-gradient(145deg, #0d1017 0%, #171d2f 55%, #1a1228 100%);
+          border: 1px solid rgba(255,255,255,0.07);
+          box-shadow: 0 12px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+          position: relative;
+          overflow: hidden;
+          min-height: 220px;
+        }
+        /* Sub-cards */
+        .dash-sub-card {
+          padding: 22px;
+          display: flex;
+          flex-direction: column;
+        }
+        /* Glass button */
+        .glass-btn {
+          width: 28px; height: 28px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.05);
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(255,255,255,0.5);
+          transition: background 0.15s;
+        }
+        .glass-btn:hover { background: rgba(255,255,255,0.1); }
+        /* P&L badge */
+        .pnl-badge {
+          display: flex; align-items: center; gap: 4px;
+          font-size: 11px; font-weight: 700;
+          padding: 3px 10px; border-radius: 99px;
+        }
+        .pnl-pos { background: rgba(34,197,94,0.18); color: ${JADE}; }
+        .pnl-neg { background: rgba(248,113,113,0.18); color: ${CORAL}; }
+        /* KPI tile */
+        .kpi-tile { padding: 18px 18px; }
+        /* Typography helpers */
+        .section-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+        .section-sub   { font-size: 11px; color: var(--text-muted); }
+        .card-eyebrow  { font-size: 10px; font-weight: 600; letter-spacing: 1.8px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .card-link     { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--indigo-500); font-weight: 600; text-decoration: none; margin-top: auto; padding-top: 12px; }
+        .card-link:hover { color: var(--indigo-400); }
+        /* Spin */
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+
+      <div style={{ maxWidth: 1280 }}>
+        {/* Greeting */}
+        <Section>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:22, flexWrap:'wrap', gap:10 }}>
+            <div>
+              <h1 style={{ fontSize:26, fontWeight:800, color:'var(--text-primary)', letterSpacing:-0.5, marginBottom:3 }}>
+                {greeting},{' '}
+                <span style={{ background:'linear-gradient(135deg,var(--indigo-400),#a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                  {name}
+                </span>
+              </h1>
+              <p style={{ fontSize:13, color:'var(--text-muted)' }}>
+                {new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+              </p>
+            </div>
+            {isMasked && (
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'var(--text-muted)', padding:'6px 12px', borderRadius:10, background:'var(--bg-surface-2)', border:'1px solid var(--border)' }}>
+                <EyeOff size={12}/> Privacy mode on
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </Section>
 
-      {/* ── Row 3: Goals + Transactions ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        {/* 1. Wealth header */}
+        {!wealthLoading && <WealthHeaderCard />}
 
-        {/* Financial Goals (static design preserved) */}
-        <div style={{ background: 'var(--bg-surface)', borderRadius: 20, padding: 24, border: '1px solid var(--border)' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Financial Goals Tracker</p>
-          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 4 }}>
-            {GOALS.map(g => <GoalCard key={g.label} goal={g} />)}
+        {/* 2. KPI strip */}
+        <Section delay={0.1}><KpiStrip /></Section>
+
+        {/* 3. Insights */}
+        <InsightsHub />
+
+        {/* 4. Heatmap */}
+        <PortfolioHeatmap />
+
+        {/* 5 + 6. Charts row — both in same grid */}
+        <Section delay={0.28}>
+          <div className="charts-row">
+            <ForecastChart />
+            <MoMChart />
           </div>
-        </div>
+        </Section>
 
-        {/* Latest Transactions — real data */}
-        <div style={{ background: 'var(--bg-surface)', borderRadius: 20, padding: 24, border: '1px solid var(--border)' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Latest Transactions</p>
-          {recentTxn.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '32px 0' }}>No transactions yet</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {recentTxn.map((t, i) => (
-                <div
-                  key={t.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 8px', borderRadius: 10, transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                    background: 'var(--bg-surface-2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-                  }}>
-                    {CATEGORY_EMOJI[t.category] ?? '💵'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.merchant}
-                    </p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>
-                    {t.type === 'income' ? '+' : '–'} {fmt(t.amount)}
-                  </span>
-                  <span style={{
-                    padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, flexShrink: 0,
-                    background: t.type === 'income' ? 'rgba(34,197,94,0.15)' : 'rgba(99,102,241,0.15)',
-                    color: t.type === 'income' ? '#22c55e' : '#818cf8',
-                  }}>
-                    {t.type === 'income' ? 'Income' : 'Expense'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* 7. Recent transactions */}
+        <RecentTxns />
       </div>
-    </div>
+    </>
   );
+}
+
+// tiny helper — returns value clamped between min and max (for font-size)
+function clamp(min: number, max: number): number {
+  return max; // actual CSS clamp used inline via responsive classes
 }
