@@ -13,6 +13,7 @@ import { MutualFundsModule } from './modules/mutual-funds/mutual-funds.module';
 import { StocksModule } from './modules/stocks/stocks.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { InsuranceModule } from './modules/insurance/insurance.module';
+import { CopilotModule } from './modules/copilot/copilot.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { InsuranceModule } from './modules/insurance/insurance.module';
     MutualFundsModule,
     StocksModule,
     InsuranceModule,
+    CopilotModule,
   ],
   controllers: [AppController],
   providers: [AppService],

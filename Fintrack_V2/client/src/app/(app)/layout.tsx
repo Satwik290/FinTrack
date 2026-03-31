@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ArrowLeftRight, PiggyBank,
   Sparkles, Target, Settings, TrendingUp,
   ChevronLeft, ChevronRight, LogOut, X, Menu,
-  Landmark, BookOpen, BarChart2,
+  Landmark, BookOpen, BarChart2, Bot
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +21,7 @@ const NAV = [
   // { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
   // { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
   { href: "/wealth",       icon: Landmark,        label: "Wealth"        },
+  { href: "/copilot",      icon: Bot,             label: "Copilot"       },
 ];
 
 const BOTTOM_NAV_ITEMS = [
@@ -32,6 +33,7 @@ const BOTTOM_NAV_ITEMS = [
   // { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
   // { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
   { href: "/wealth",       icon: Landmark,        label: "Wealth" },
+  { href: "/copilot",      icon: Bot,             label: "Copilot" },
 ];
 
 /* ─── Desktop Sidebar ────────────────────────────── */
