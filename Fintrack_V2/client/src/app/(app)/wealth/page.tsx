@@ -5,6 +5,8 @@ import {
   Eye, EyeOff, RefreshCw, TrendingUp, TrendingDown,
   Plus, Trash2, ChevronDown, Search, X, Loader2,
   Landmark, BarChart2, BookOpen, Shield, AlertTriangle,
+  Calendar, CheckCircle2, Clock, Zap, Star, ArrowUpRight,
+  AlertCircle, ChevronRight,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
@@ -25,8 +27,8 @@ import api from '@/lib/api';
 
 /* ─── Design tokens ──────────────────────────────── */
 const MONO  = "'Space Mono', 'JetBrains Mono', 'Courier New', monospace";
-const GAIN  = '#2D9664';   // Jade — calm growth
-const LOSS  = '#C0614A';   // Terracotta — action required, not panic
+const GAIN  = '#2D9664';
+const LOSS  = '#C0614A';
 const CARD  = 'var(--bg-surface)';
 
 /* ─── Formatters ─────────────────────────────────── */
@@ -89,26 +91,17 @@ function NetWorthHeader({
       border: '1px solid rgba(255,255,255,0.07)',
       boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
     }}>
-      {/* Subtle background orbs */}
       <div style={{ position:'absolute',top:-60,right:-40,width:220,height:220,borderRadius:'50%',background:'rgba(99,102,241,0.07)',pointerEvents:'none' }} />
       <div style={{ position:'absolute',bottom:-40,left:60,width:140,height:140,borderRadius:'50%',background:'rgba(45,150,100,0.06)',pointerEvents:'none' }} />
 
       <div style={{ position:'relative', display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-        {/* Left — primary metric */}
         <div>
-          <p style={{ fontSize:12, fontWeight:600, letterSpacing:2, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginBottom:8 }}>
-            Net Worth
-          </p>
+          <p style={{ fontSize:12, fontWeight:600, letterSpacing:2, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginBottom:8 }}>Net Worth</p>
           <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
             <span style={{ fontFamily:MONO, fontSize:44, fontWeight:700, color:'#fff', letterSpacing:-1 }}>
               {masked ? '₹ ••••••••' : new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(data.netWorth)}
             </span>
-            <span style={{
-              display:'flex', alignItems:'center', gap:4, fontSize:15, fontWeight:700,
-              padding:'4px 12px', borderRadius:99,
-              background: isPos ? 'rgba(45,150,100,0.2)' : 'rgba(192,97,74,0.2)',
-              color: isPos ? GAIN : LOSS,
-            }}>
+            <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:15, fontWeight:700, padding:'4px 12px', borderRadius:99, background: isPos ? 'rgba(45,150,100,0.2)' : 'rgba(192,97,74,0.2)', color: isPos ? GAIN : LOSS }}>
               {isPos ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
               {fmtPct(data.totalPnlPct)}
             </span>
@@ -122,7 +115,6 @@ function NetWorthHeader({
           </p>
         </div>
 
-        {/* Right — controls + quick stats */}
         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:12 }}>
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={onSync} disabled={syncing}
@@ -136,8 +128,6 @@ function NetWorthHeader({
               {masked ? 'Show' : 'Hide'}
             </button>
           </div>
-
-          {/* Quick pillar stats */}
           <div style={{ display:'flex', gap:20 }}>
             {[
               { label:'Assets',      value: data.totalAssets,      color:'rgba(255,255,255,0.85)' },
@@ -145,14 +135,10 @@ function NetWorthHeader({
             ].map(s => (
               <div key={s.label} style={{ textAlign:'right' }}>
                 <p style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginBottom:2 }}>{s.label}</p>
-                <p style={{ fontFamily:MONO, fontSize:15, fontWeight:700, color:s.color }}>
-                  {masked ? '••••' : fmtINR(s.value)}
-                </p>
+                <p style={{ fontFamily:MONO, fontSize:15, fontWeight:700, color:s.color }}>{masked ? '••••' : fmtINR(s.value)}</p>
               </div>
             ))}
           </div>
-
-          {/* Freshness strip */}
           <div style={{ display:'flex', gap:12, fontSize:10, color:'rgba(255,255,255,0.25)' }}>
             <span>📊 Stocks: {timeAgo(data.lastSynced.stocks)}</span>
             <span>📈 MF: {timeAgo(data.lastSynced.mutualFunds)}</span>
@@ -160,15 +146,12 @@ function NetWorthHeader({
         </div>
       </div>
 
-      {/* Debt-to-asset progress bar */}
       <div style={{ marginTop:20 }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
           <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)', letterSpacing:1, textTransform:'uppercase' }}>
             Financial Freedom — {Math.round(data.financialFreedomPct)}% of debt repaid
           </span>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>
-            D/A: {data.debtToAsset.toFixed(1)}%
-          </span>
+          <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>D/A: {data.debtToAsset.toFixed(1)}%</span>
         </div>
         <div style={{ height:4, background:'rgba(255,255,255,0.08)', borderRadius:99, overflow:'hidden' }}>
           <motion.div
@@ -195,8 +178,6 @@ function OverviewTab({ data, masked }: { data: WealthSummary; masked: boolean })
 
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-
-      {/* Allocation donut */}
       <div className="card" style={{ padding:24 }}>
         <p style={{ fontWeight:700, fontSize:15, color:'var(--text-primary)', marginBottom:4 }}>Portfolio Allocation</p>
         <p style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16 }}>Total: {fmtINR(data.totalAssets, masked)}</p>
@@ -216,7 +197,6 @@ function OverviewTab({ data, masked }: { data: WealthSummary; masked: boolean })
         )}
       </div>
 
-      {/* P&L waterfall */}
       <div className="card" style={{ padding:24 }}>
         <p style={{ fontWeight:700, fontSize:15, color:'var(--text-primary)', marginBottom:4 }}>P&L by Category</p>
         <p style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16 }}>Unrealised gain/loss</p>
@@ -234,7 +214,6 @@ function OverviewTab({ data, masked }: { data: WealthSummary; masked: boolean })
         </ResponsiveContainer>
       </div>
 
-      {/* Top 5 performers */}
       <div className="card" style={{ padding:24, gridColumn:'span 2' }}>
         <p style={{ fontWeight:700, fontSize:15, color:'var(--text-primary)', marginBottom:16 }}>Top 5 Performers</p>
         {data.top5Performers.length === 0
@@ -264,24 +243,12 @@ function OverviewTab({ data, masked }: { data: WealthSummary; masked: boolean })
         }
       </div>
 
-      {/* Insights strip */}
       {data.debtToAsset > 30 && (
         <div style={{ gridColumn:'span 2', padding:'14px 20px', borderRadius:14, background:'rgba(192,97,74,0.08)', border:'1px solid rgba(192,97,74,0.2)', display:'flex', alignItems:'center', gap:12 }}>
           <span style={{ fontSize:20 }}>💡</span>
           <p style={{ fontSize:13, color:'var(--text-secondary)', lineHeight:1.5 }}>
             Your debt-to-asset ratio is <strong style={{ color:LOSS }}>{data.debtToAsset.toFixed(1)}%</strong>.
             Financial advisors recommend keeping this below 30%.
-            Consider accelerating loan repayments or increasing investments.
-          </p>
-        </div>
-      )}
-      {data.stockSummary.byExchange?.CRYPTO > 0 && data.totalAssets > 0 &&
-        (data.stockSummary.byExchange.CRYPTO / data.totalAssets) * 100 > 30 && (
-        <div style={{ gridColumn:'span 2', padding:'14px 20px', borderRadius:14, background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)', display:'flex', alignItems:'center', gap:12 }}>
-          <span style={{ fontSize:20 }}>⚠️</span>
-          <p style={{ fontSize:13, color:'var(--text-secondary)', lineHeight:1.5 }}>
-            Crypto is over <strong style={{ color:'var(--warning)' }}>{((data.stockSummary.byExchange.CRYPTO / data.totalAssets) * 100).toFixed(0)}%</strong> of your total wealth.
-            Consider rebalancing towards Mutual Funds to reduce volatility.
           </p>
         </div>
       )}
@@ -301,7 +268,6 @@ function StocksTab({ data, masked }: { data: WealthSummary; masked: boolean }) {
 
   return (
     <div>
-      {/* Summary strip */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         {[
           { l:'Invested',   v: fmtINR(data.stockSummary.totalInvested, masked) },
@@ -317,7 +283,6 @@ function StocksTab({ data, masked }: { data: WealthSummary; masked: boolean }) {
         ))}
       </div>
 
-      {/* Controls */}
       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
         {(['ALL','NSE','US','CRYPTO'] as const).map(e => (
           <button key={e} onClick={()=>setFilterEx(e)} className="btn btn-sm"
@@ -330,7 +295,6 @@ function StocksTab({ data, masked }: { data: WealthSummary; masked: boolean }) {
         </button>
       </div>
 
-      {/* Holdings list */}
       <div className="card" style={{ overflow:'hidden' }}>
         {filtered.length === 0
           ? <EmptyState icon="📊" message="No stock holdings yet. Add NSE, US stocks, or crypto." action={()=>setShowModal(true)} actionLabel="Add Holding" />
@@ -387,7 +351,6 @@ function MutualFundsTab({ data, masked }: { data: WealthSummary; masked: boolean
 
   return (
     <div>
-      {/* Summary */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         {[
           { l:'Invested',  v: fmtINR(data.mfSummary.totalInvested, masked) },
@@ -403,7 +366,6 @@ function MutualFundsTab({ data, masked }: { data: WealthSummary; masked: boolean
         ))}
       </div>
 
-      {/* Controls */}
       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
         {(['all','lumpsum','sip'] as const).map(f => (
           <button key={f} onClick={()=>setFilterType(f)} className="btn btn-sm"
@@ -449,7 +411,6 @@ function MutualFundsTab({ data, masked }: { data: WealthSummary; masked: boolean
                     </div>
                   </div>
 
-                  {/* Key stats row */}
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginTop:14 }}>
                     {[
                       { l:'Invested', v:fmtINR(h.investedAmount, masked) },
@@ -464,7 +425,6 @@ function MutualFundsTab({ data, masked }: { data: WealthSummary; masked: boolean
                     ))}
                   </div>
 
-                  {/* Expanded NAV chart */}
                   <AnimatePresence>
                     {expanded && (
                       <motion.div initial={{ height:0, opacity:0 }} animate={{ height:'auto', opacity:1 }} exit={{ height:0, opacity:0 }}>
@@ -486,7 +446,6 @@ function MutualFundsTab({ data, masked }: { data: WealthSummary; masked: boolean
   );
 }
 
-/* ── Mini NAV chart ─────────────────────────────── */
 function MiniNavChart({ schemeCode, period, onPeriodChange, masked }: {
   schemeCode:string; period:'1Y'|'3Y'|'5Y'; onPeriodChange:(p:'1Y'|'3Y'|'5Y')=>void; masked:boolean;
 }) {
@@ -620,7 +579,6 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
         </button>
       </div>
 
-      {/* Financial freedom bar */}
       <div className="card" style={{ padding:20, marginBottom:20 }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
           <p style={{ fontWeight:600, fontSize:13, color:'var(--text-primary)' }}>Financial Freedom Progress</p>
@@ -631,9 +589,7 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
             transition={{ duration:1.2, ease:[0.16,1,0.3,1] }}
             style={{ height:'100%', borderRadius:99, background:`linear-gradient(90deg,${GAIN},#34d399)` }}/>
         </div>
-        <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:6 }}>
-          Based on principal repaid across all loans. 100% = debt-free.
-        </p>
+        <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:6 }}>Based on principal repaid across all loans. 100% = debt-free.</p>
       </div>
 
       {sorted.length === 0
@@ -645,7 +601,6 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
                 ? ((l.totalPrincipalInCents - l.remainingBalanceInCents) / l.totalPrincipalInCents) * 100
                 : 0;
               const rateColor = l.interestRate > 10 ? LOSS : l.interestRate > 6 ? 'var(--warning)' : GAIN;
-
               return (
                 <motion.div key={l.id} initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.06 }}
                   className="card" style={{ padding:22 }}>
@@ -667,14 +622,11 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
                       <p style={{ fontFamily:MONO, fontSize:18, fontWeight:800, color:LOSS }}>
                         {masked ? '₹ ••••••' : fmtINR(l.remainingBalanceInCents/100)}
                       </p>
-                      <p style={{ fontSize:11, color:'var(--text-muted)' }}>
-                        of {masked ? '₹ ••••' : fmtINR(l.totalPrincipalInCents/100)}
-                      </p>
+                      <p style={{ fontSize:11, color:'var(--text-muted)' }}>of {masked ? '₹ ••••' : fmtINR(l.totalPrincipalInCents/100)}</p>
                     </div>
                     <button className="btn btn-icon" onClick={()=>deleteLiability.mutate(l.id)} style={{ width:28, height:28, color:'var(--danger)', flexShrink:0 }}><Trash2 size={12} /></button>
                   </div>
 
-                  {/* Repayment progress */}
                   <div>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
                       <span style={{ fontSize:11, color:'var(--text-muted)' }}>Repaid</span>
@@ -686,7 +638,6 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
                         style={{ height:'100%', borderRadius:99, background:`linear-gradient(90deg,${GAIN},#34d399)` }}/>
                     </div>
                   </div>
-
                   {l.emiInCents && (
                     <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:8 }}>
                       Monthly EMI: <span style={{ fontFamily:MONO, fontWeight:700, color:'var(--text-primary)' }}>{masked ? '••••' : fmtINR(l.emiInCents/100)}</span>
@@ -707,76 +658,359 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
 }
 
 /* ══════════════════════════════════════════════════
- *  INSURANCE TAB
+ *  INSURANCE TAB — Elite redesign
  * ══════════════════════════════════════════════════ */
+
+const POLICY_META: Record<string, { icon: string; color: string; bg: string; label: string }> = {
+  TERM_LIFE: { icon: '🛡️', color: '#6366f1', bg: 'rgba(99,102,241,0.10)', label: 'Term Life' },
+  HEALTH:    { icon: '🏥', color: '#10b981', bg: 'rgba(16,185,129,0.10)',  label: 'Health' },
+  MOTOR:     { icon: '🚗', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)',  label: 'Motor' },
+  HOME:      { icon: '🏠', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)',  label: 'Home' },
+};
+
+function daysUntil(dateStr: string): number {
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+}
+
 function InsuranceTab({ data, masked }: { data: WealthSummary; masked: boolean }) {
   const deletePolicy = useDeleteInsurance();
-  const payPremium = usePayPremium();
+  const payPremium   = usePayPremium();
   const [showModal, setShowModal] = useState(false);
+  const [selectedType, setSelectedType] = useState<string>('ALL');
 
-  const POLICY_ICONS: Record<string, string> = {
-    TERM_LIFE: '🛡️', HEALTH: '🏥', MOTOR: '🚗', HOME: '🏠'
-  };
+  const policies: InsurancePolicy[] = data.insurancePolicies ?? [];
+
+  // ── HLV gap metrics ──────────────────────────────
+  const hlv = (data as any).hlvMetrics ?? null;
+  const totalCoverage = policies.reduce((s, p) => s + (p.sumInsured ?? 0), 0);
+  const termPolicies  = policies.filter(p => p.type === 'TERM_LIFE');
+  const termCoverage  = termPolicies.reduce((s, p) => s + (p.sumInsured ?? 0), 0);
+  const annualPremium = policies.reduce((s, p) => {
+    const amt = p.premiumAmount ?? 0;
+    const freq = (p.frequency ?? '').toLowerCase();
+    if (freq === 'monthly')     return s + amt * 12;
+    if (freq === 'quarterly')   return s + amt * 4;
+    if (freq === 'semi_annual') return s + amt * 2;
+    return s + amt;
+  }, 0);
+
+  // Urgent renewals (within 30 days)
+  const urgentRenewals = policies.filter(p => {
+    const d = daysUntil(p.nextDueDate);
+    return d >= 0 && d <= 30;
+  });
+
+  const filteredPolicies = selectedType === 'ALL'
+    ? policies
+    : policies.filter(p => p.type === selectedType);
+
+  // Coverage ratio vs recommended (10x income approximation via hlv or fallback)
+  const recommended = hlv?.requiredCoverage ?? 0;
+  const coverageRatio = recommended > 0 ? Math.min((termCoverage / recommended) * 100, 120) : null;
+  const coverageGap   = recommended > 0 ? Math.max(recommended - termCoverage, 0) : 0;
 
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div>
-          <p style={{ fontWeight:700, fontSize:15, color:'var(--text-primary)' }}>Insurance Vault</p>
-          <p style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
-            Total Coverage: <span style={{ fontFamily:MONO, fontWeight:700, color:GAIN }}>{fmtINR(data.totalInsuranceCoverage, masked)}</span>
-          </p>
-        </div>
-        <button className="btn btn-primary btn-sm" onClick={()=>setShowModal(true)}>
+      {/* ── Top metrics row ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+        {[
+          {
+            label: 'Total Coverage',
+            value: fmtINR(totalCoverage, masked),
+            sub: `${policies.length} active polic${policies.length === 1 ? 'y' : 'ies'}`,
+            icon: '🛡️',
+            color: '#6366f1',
+            bg: 'rgba(99,102,241,0.08)',
+          },
+          {
+            label: 'Annual Premium',
+            value: fmtINR(annualPremium, masked),
+            sub: 'across all policies',
+            icon: '💳',
+            color: LOSS,
+            bg: 'rgba(192,97,74,0.08)',
+          },
+          {
+            label: 'Term Coverage',
+            value: fmtINR(termCoverage, masked),
+            sub: `${termPolicies.length} term polic${termPolicies.length === 1 ? 'y' : 'ies'}`,
+            icon: '📋',
+            color: GAIN,
+            bg: 'rgba(45,150,100,0.08)',
+          },
+          {
+            label: 'Renewals Due',
+            value: String(urgentRenewals.length),
+            sub: urgentRenewals.length > 0 ? 'within 30 days' : 'nothing urgent',
+            icon: urgentRenewals.length > 0 ? '⚠️' : '✅',
+            color: urgentRenewals.length > 0 ? '#f59e0b' : GAIN,
+            bg: urgentRenewals.length > 0 ? 'rgba(245,158,11,0.08)' : 'rgba(45,150,100,0.08)',
+          },
+        ].map(s => (
+          <div key={s.label} className="card" style={{ padding:'16px 18px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+              <p style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600 }}>{s.label}</p>
+              <span style={{ fontSize:18 }}>{s.icon}</span>
+            </div>
+            <p style={{ fontFamily:MONO, fontSize:18, fontWeight:700, color:s.color, marginBottom:4 }}>{s.value}</p>
+            <p style={{ fontSize:11, color:'var(--text-muted)' }}>{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── HLV Protection Shield ── */}
+      {recommended > 0 && (
+        <motion.div
+          initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
+          style={{
+            marginBottom:20, borderRadius:18, overflow:'hidden', position:'relative',
+            background: coverageGap > 0
+              ? 'linear-gradient(135deg,rgba(192,97,74,0.08) 0%,rgba(192,97,74,0.03) 100%)'
+              : 'linear-gradient(135deg,rgba(45,150,100,0.08) 0%,rgba(45,150,100,0.03) 100%)',
+            border: `1px solid ${coverageGap > 0 ? 'rgba(192,97,74,0.2)' : 'rgba(45,150,100,0.2)'}`,
+            padding:'20px 24px',
+          }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+            <div style={{ flex:1, minWidth:200 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                <span style={{ fontSize:22 }}>{coverageGap > 0 ? '⚠️' : '✅'}</span>
+                <div>
+                  <p style={{ fontWeight:700, fontSize:15, color:'var(--text-primary)', marginBottom:2 }}>
+                    {coverageGap > 0 ? 'Coverage Gap Detected' : 'Protection Goal Met'}
+                  </p>
+                  <p style={{ fontSize:12, color:'var(--text-muted)' }}>
+                    HLV-based life insurance analysis
+                  </p>
+                </div>
+              </div>
+
+              {/* Coverage bar */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:'var(--text-muted)' }}>Coverage vs Recommended</span>
+                  <span style={{ fontFamily:MONO, fontSize:12, fontWeight:700, color: coverageGap > 0 ? LOSS : GAIN }}>
+                    {coverageRatio?.toFixed(0) ?? 0}%
+                  </span>
+                </div>
+                <div style={{ height:10, background:'var(--bg-surface-2)', borderRadius:99, overflow:'hidden', position:'relative' }}>
+                  <motion.div
+                    initial={{ width:0 }}
+                    animate={{ width:`${Math.min(coverageRatio ?? 0, 100)}%` }}
+                    transition={{ duration:1, ease:[0.16,1,0.3,1] }}
+                    style={{ height:'100%', borderRadius:99, background: coverageGap > 0 ? `linear-gradient(90deg,${LOSS},#f87171)` : `linear-gradient(90deg,${GAIN},#34d399)` }}
+                  />
+                  {/* 100% marker */}
+                  <div style={{ position:'absolute', top:0, bottom:0, left:'83.3%', width:1.5, background:'rgba(255,255,255,0.3)' }}/>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4, fontSize:10, color:'var(--text-muted)' }}>
+                  <span>0</span>
+                  <span>Required: {masked ? '••••' : fmtINR(recommended)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right stats */}
+            <div style={{ display:'flex', gap:20 }}>
+              {[
+                { label:'You Have', value: fmtINR(termCoverage, masked), color: 'var(--text-primary)' },
+                { label:'Recommended', value: fmtINR(recommended, masked), color: 'var(--text-secondary)' },
+                ...(coverageGap > 0 ? [{ label:'Gap', value: fmtINR(coverageGap, masked), color: LOSS }] : []),
+              ].map(s => (
+                <div key={s.label} style={{ textAlign:'right' }}>
+                  <p style={{ fontSize:11, color:'var(--text-muted)', marginBottom:3 }}>{s.label}</p>
+                  <p style={{ fontFamily:MONO, fontSize:14, fontWeight:700, color:s.color }}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Urgent renewals banner ── */}
+      <AnimatePresence>
+        {urgentRenewals.length > 0 && (
+          <motion.div
+            initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, height:0 }}
+            style={{ marginBottom:16, padding:'12px 18px', borderRadius:12, background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.25)', display:'flex', alignItems:'center', gap:12 }}>
+            <Clock size={16} style={{ color:'#f59e0b', flexShrink:0 }}/>
+            <div style={{ flex:1 }}>
+              <span style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>
+                {urgentRenewals.length} renewal{urgentRenewals.length>1?'s':''} due soon:
+              </span>
+              <span style={{ fontSize:13, color:'var(--text-secondary)', marginLeft:6 }}>
+                {urgentRenewals.map(p => {
+                  const d = daysUntil(p.nextDueDate);
+                  return `${p.policyName} (${d === 0 ? 'today' : `${d}d`})`;
+                }).join(' · ')}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Filter + Add ── */}
+      <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap', alignItems:'center' }}>
+        {(['ALL', 'TERM_LIFE', 'HEALTH', 'MOTOR', 'HOME'] as const).map(t => {
+          const meta = t === 'ALL' ? null : POLICY_META[t];
+          const active = selectedType === t;
+          return (
+            <button key={t} onClick={()=>setSelectedType(t)} className="btn btn-sm"
+              style={{
+                border:'none',
+                background: active ? (meta?.color ?? 'var(--indigo-500)') : 'var(--bg-surface-2)',
+                color: active ? '#fff' : 'var(--text-secondary)',
+              }}>
+              {meta ? `${meta.icon} ${meta.label}` : 'All Policies'}
+            </button>
+          );
+        })}
+        <button className="btn btn-primary btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setShowModal(true)}>
           <Plus size={14}/> Add Policy
         </button>
       </div>
 
-      {data.insurancePolicies.length === 0
-        ? <EmptyState icon="🛡️" message="No insurance policies found. Protect your wealth!" />
-        : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:16 }}>
-            {data.insurancePolicies.map((p, i) => (
-              <motion.div key={p.id} initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.06 }}
-                className="card" style={{ padding:20, display:'flex', flexDirection:'column' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, marginBottom:16 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:40, height:40, borderRadius:10, background:'rgba(52,211,153,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>
-                      {POLICY_ICONS[p.type] ?? '📋'}
-                    </div>
-                    <div>
-                      <p style={{ fontWeight:700, fontSize:14, color:'var(--text-primary)' }}>{p.policyName}</p>
-                      <p style={{ fontSize:11, color:'var(--text-muted)' }}>{p.provider}</p>
-                    </div>
-                  </div>
-                  <button className="btn btn-icon" onClick={()=>deletePolicy.mutate(p.id)} style={{ width:28, height:28, color:'var(--danger)' }}><Trash2 size={12}/></button>
-                </div>
+      {/* ── Policy cards ── */}
+      {filteredPolicies.length === 0 ? (
+        <EmptyState
+          icon="🛡️"
+          message={policies.length === 0 ? "No insurance policies found. Protect your wealth!" : "No policies match this filter."}
+          action={policies.length === 0 ? ()=>setShowModal(true) : undefined}
+          actionLabel="Add Policy"
+        />
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))', gap:16 }}>
+          {filteredPolicies.map((p, i) => {
+            const meta   = POLICY_META[p.type] ?? { icon:'📋', color:'#6366f1', bg:'rgba(99,102,241,0.08)', label:p.type };
+            const days   = daysUntil(p.nextDueDate);
+            const urgent = days >= 0 && days <= 7;
+            const soon   = days >= 0 && days <= 30;
+            const overdue = days < 0;
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-                  <div>
-                    <p style={{ fontSize:11, color:'var(--text-muted)' }}>Sum Insured</p>
-                    <p style={{ fontFamily:MONO, fontSize:16, fontWeight:700, color:'var(--text-primary)' }}>{fmtINR(p.sumInsured, masked)}</p>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <p style={{ fontSize:11, color:'var(--text-muted)' }}>Premium ({p.frequency.toLowerCase()})</p>
-                    <p style={{ fontFamily:MONO, fontSize:14, fontWeight:700, color:LOSS }}>{fmtINR(p.premiumAmount, masked)}</p>
-                  </div>
-                </div>
+            let dueBadgeColor = 'var(--text-muted)';
+            let dueBgColor    = 'var(--bg-surface-2)';
+            if (overdue)      { dueBadgeColor = LOSS;    dueBgColor = 'rgba(192,97,74,0.10)'; }
+            else if (urgent)  { dueBadgeColor = LOSS;    dueBgColor = 'rgba(192,97,74,0.08)'; }
+            else if (soon)    { dueBadgeColor = '#f59e0b'; dueBgColor = 'rgba(245,158,11,0.08)'; }
 
-                <div style={{ background:'var(--bg-surface-2)', borderRadius:10, padding:12, marginTop:'auto' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                    <span style={{ fontSize:11, color:'var(--text-muted)' }}>Next Due</span>
-                    <span style={{ fontFamily:MONO, fontSize:12, fontWeight:700, color:'var(--text-primary)' }}>{new Date(p.nextDueDate).toLocaleDateString()}</span>
+            return (
+              <motion.div
+                key={p.id}
+                initial={{ opacity:0, y:12 }}
+                animate={{ opacity:1, y:0 }}
+                transition={{ delay:i*0.06 }}
+                style={{
+                  borderRadius:18, overflow:'hidden', border:'1px solid var(--border)',
+                  background:'var(--bg-surface)',
+                  boxShadow: urgent ? `0 0 0 1px ${LOSS}40, var(--shadow-sm)` : 'var(--shadow-sm)',
+                  display:'flex', flexDirection:'column',
+                  transition:'box-shadow 0.2s, transform 0.2s',
+                }}
+                whileHover={{ scale:1.01 }}
+              >
+                {/* Card header strip */}
+                <div style={{ height:4, background: meta.color, opacity:0.8 }}/>
+
+                <div style={{ padding:'18px 20px', flex:1, display:'flex', flexDirection:'column' }}>
+                  {/* Top row */}
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <div style={{ width:44, height:44, borderRadius:12, background:meta.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+                        {meta.icon}
+                      </div>
+                      <div>
+                        <p style={{ fontWeight:700, fontSize:14, color:'var(--text-primary)', marginBottom:3, lineHeight:1.2 }}>{p.policyName}</p>
+                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <span style={{ fontSize:11, padding:'2px 8px', borderRadius:99, background:meta.bg, color:meta.color, fontWeight:600 }}>{meta.label}</span>
+                          <span style={{ fontSize:11, color:'var(--text-muted)' }}>{p.provider}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button className="btn btn-icon" onClick={()=>deletePolicy.mutate(p.id)}
+                      style={{ width:28, height:28, color:'var(--danger)', flexShrink:0, border:'none', background:'transparent' }}>
+                      <Trash2 size={13}/>
+                    </button>
                   </div>
-                  <button onClick={()=>payPremium.mutate(p.id)} disabled={payPremium.isPending}
-                    className="btn btn-sm" style={{ width:'100%', border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', marginTop:4, fontSize:12 }}>
-                    Mark as Paid {payPremium.isPending && <Loader2 size={12} className="animate-spin ml-2"/>}
-                  </button>
+
+                  {/* Sum insured — hero number */}
+                  <div style={{ marginBottom:16 }}>
+                    <p style={{ fontSize:10, fontWeight:600, letterSpacing:1.2, color:'var(--text-muted)', textTransform:'uppercase', marginBottom:4 }}>Sum Insured</p>
+                    <p style={{ fontFamily:MONO, fontSize:24, fontWeight:800, color:'var(--text-primary)', letterSpacing:-0.5 }}>
+                      {masked ? '₹ ••••••••' : new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(p.sumInsured)}
+                    </p>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
+                    <div style={{ padding:'10px 12px', borderRadius:10, background:'var(--bg-surface-2)' }}>
+                      <p style={{ fontSize:10, color:'var(--text-muted)', marginBottom:3 }}>Premium</p>
+                      <p style={{ fontFamily:MONO, fontSize:13, fontWeight:700, color:LOSS }}>
+                        {masked ? '••••' : fmtINR(p.premiumAmount)}
+                      </p>
+                      <p style={{ fontSize:10, color:'var(--text-muted)', marginTop:1 }}>{p.frequency?.toLowerCase?.()}</p>
+                    </div>
+                    <div style={{ padding:'10px 12px', borderRadius:10, background: dueBgColor }}>
+                      <p style={{ fontSize:10, color:'var(--text-muted)', marginBottom:3 }}>Next Due</p>
+                      <p style={{ fontFamily:MONO, fontSize:13, fontWeight:700, color: dueBadgeColor }}>
+                        {overdue ? 'Overdue' : days === 0 ? 'Today' : `${days}d`}
+                      </p>
+                      <p style={{ fontSize:10, color:'var(--text-muted)', marginTop:1 }}>
+                        {new Date(p.nextDueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pay premium CTA */}
+                  <div style={{ marginTop:'auto' }}>
+                    {(overdue || soon) && (
+                      <button
+                        onClick={()=>payPremium.mutate(p.id)}
+                        disabled={payPremium.isPending}
+                        style={{
+                          width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                          padding:'10px 16px', borderRadius:10, border:'none', cursor:'pointer',
+                          background: overdue
+                            ? `linear-gradient(135deg,${LOSS},#e87c6a)`
+                            : soon
+                            ? 'linear-gradient(135deg,#f59e0b,#fbbf24)'
+                            : 'var(--bg-surface-2)',
+                          color: (overdue || soon) ? '#fff' : 'var(--text-primary)',
+                          fontSize:13, fontWeight:700,
+                          boxShadow: overdue ? `0 4px 14px ${LOSS}40` : soon ? '0 4px 14px rgba(245,158,11,0.35)' : 'none',
+                          transition:'all 0.2s',
+                        }}
+                      >
+                        {payPremium.isPending
+                          ? <><Loader2 size={14} style={{ animation:'spin 1s linear infinite' }}/> Processing…</>
+                          : <><CheckCircle2 size={14}/> Mark Premium as Paid</>
+                        }
+                      </button>
+                    )}
+                    {!overdue && !soon && (
+                      <button
+                        onClick={()=>payPremium.mutate(p.id)}
+                        disabled={payPremium.isPending}
+                        style={{
+                          width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                          padding:'9px 16px', borderRadius:10, border:'1px solid var(--border)', cursor:'pointer',
+                          background:'transparent', color:'var(--text-secondary)', fontSize:12, fontWeight:600,
+                          transition:'all 0.15s',
+                        }}
+                        onMouseEnter={e=>(e.currentTarget.style.background='var(--bg-surface-2)')}
+                        onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
+                      >
+                        {payPremium.isPending
+                          ? <><Loader2 size={13} style={{ animation:'spin 1s linear infinite' }}/> Processing…</>
+                          : <><CheckCircle2 size={13}/> Mark as Paid</>
+                        }
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+      )}
 
       <AnimatePresence>
         {showModal && <AddInsuranceModal onClose={()=>setShowModal(false)} />}
@@ -788,13 +1022,39 @@ function InsuranceTab({ data, masked }: { data: WealthSummary; masked: boolean }
 /* ══════════════════════════════════════════════════
  *  MODALS
  * ══════════════════════════════════════════════════ */
+
+/**
+ * FIX: The original AddStockModal had a null-safety bug.
+ * `selected` state could be null when addStock.mutate was called
+ * because the disabled guard uses React state which can be stale in
+ * closures. Additionally, the `name` was being set incorrectly:
+ *   r.primary==='NSE' ? r.secondary : r.primary
+ * but r.primary is the TICKER (e.g. "TCS"), never the string "NSE".
+ * The company name is r.secondary. Fixed below.
+ */
 function AddStockModal({ onClose }: { onClose:()=>void }) {
   const [exchange, setExchange] = useState<'NSE'|'US'|'CRYPTO'>('NSE');
   const [searchQ, setSearchQ] = useState('');
   const [selected, setSelected] = useState<{ticker:string;name:string}|null>(null);
-  const [qty, setQty] = useState(''); const [price, setPrice] = useState('');
+  const [qty, setQty] = useState('');
+  const [price, setPrice] = useState('');
   const { data:results=[] } = useStockSearch(searchQ, exchange);
   const addStock = useAddStock();
+
+  const handleSubmit = () => {
+    // ── FIX: explicit null guard before mutating ──
+    if (!selected || !qty || !price) return;
+    addStock.mutate(
+      {
+        ticker: selected.ticker,
+        exchange,
+        companyName: selected.name,  // ── FIX: was selected!.name with potential null crash
+        quantity: parseFloat(qty),
+        avgBuyPrice: parseFloat(price),
+      },
+      { onSuccess: onClose },
+    );
+  };
 
   return (
     <Modal title="Add Stock / Crypto" onClose={onClose}>
@@ -806,15 +1066,43 @@ function AddStockModal({ onClose }: { onClose:()=>void }) {
           </button>
         ))}
       </div>
-      <SearchDropdown label={`Search ${EXCHANGE_CFG[exchange].label}`} query={searchQ} setQuery={setSearchQ}
-        results={(results||[]).filter(Boolean).map((r: any)=>({key:r.ticker, primary:r.ticker, secondary:r.name}))}
-        onSelect={r=>{setSelected({ticker:r.key,name:r.primary==='NSE'?r.secondary:r.primary});setSearchQ(r.secondary);}} />
+      <SearchDropdown
+        label={`Search ${EXCHANGE_CFG[exchange].label}`}
+        query={searchQ}
+        setQuery={setSearchQ}
+        results={(results ?? []).filter(Boolean).map((r: any) => ({
+          key: r.ticker ?? r.symbol ?? '',
+          primary: r.ticker ?? r.symbol ?? '',
+          // ── FIX: company name is always r.name or r.schemeName, not conditional on exchange ──
+          secondary: r.name ?? r.companyName ?? r.schemeName ?? '',
+        }))}
+        onSelect={r => {
+          setSelected({ ticker: r.key, name: r.secondary || r.key });
+          setSearchQ(r.secondary || r.key);
+        }}
+      />
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginTop:14 }}>
         <FormField label="Quantity" value={qty} onChange={setQty} type="number" placeholder="10" />
         <FormField label="Avg Buy Price (₹)" value={price} onChange={setPrice} type="number" placeholder="1500.00" />
       </div>
-      <ModalActions onClose={onClose} onSubmit={()=>addStock.mutate({ticker:selected!.ticker,exchange,companyName:selected!.name,quantity:parseFloat(qty),avgBuyPrice:parseFloat(price)},{onSuccess:onClose})}
-        disabled={!selected||!qty||!price} loading={addStock.isPending} label="Add Stock" />
+      {/* Show selected ticker confirmation */}
+      {selected && (
+        <div style={{ marginTop:10, padding:'8px 12px', borderRadius:8, background:'var(--bg-surface-2)', display:'flex', alignItems:'center', gap:8 }}>
+          <CheckCircle2 size={14} style={{ color:GAIN, flexShrink:0 }}/>
+          <span style={{ fontSize:12, color:'var(--text-secondary)' }}>
+            <strong style={{ color:'var(--text-primary)' }}>{selected.ticker}</strong>
+            {selected.name && selected.name !== selected.ticker && ` — ${selected.name}`}
+          </span>
+        </div>
+      )}
+      <ModalActions
+        onClose={onClose}
+        onSubmit={handleSubmit}
+        // ── FIX: safe null check instead of relying on !selected alone ──
+        disabled={selected === null || !qty || !price || isNaN(parseFloat(qty)) || isNaN(parseFloat(price))}
+        loading={addStock.isPending}
+        label="Add Stock"
+      />
     </Modal>
   );
 }
@@ -936,7 +1224,7 @@ function AddInsuranceModal({ onClose }: { onClose:()=>void }) {
         <div>
           <label style={LS}>Type</label>
           <select className="input" value={f.type} onChange={e=>setF(p=>({...p,type:e.target.value}))}>
-            {['TERM_LIFE','HEALTH','MOTOR','HOME'].map(c=><option key={c} value={c}>{c}</option>)}
+            {Object.entries(POLICY_META).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}
           </select>
         </div>
         <div>
@@ -945,7 +1233,7 @@ function AddInsuranceModal({ onClose }: { onClose:()=>void }) {
         <div>
           <label style={LS}>Frequency</label>
           <select className="input" value={f.frequency} onChange={e=>setF(p=>({...p,frequency:e.target.value}))}>
-            {['ANNUAL','SEMI_ANNUAL','QUARTERLY','MONTHLY'].map(c=><option key={c} value={c}>{c}</option>)}
+            {[['ANNUAL','Annual'],['SEMI_ANNUAL','Semi-Annual'],['QUARTERLY','Quarterly'],['MONTHLY','Monthly']].map(([v,l])=><option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
@@ -1082,7 +1370,6 @@ export default function WealthPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Page title */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Wealth & Investments</h1>
@@ -1090,7 +1377,6 @@ export default function WealthPage() {
         </div>
       </div>
 
-      {/* Net worth header */}
       <NetWorthHeader
         data={data} masked={isMasked}
         onToggleMask={togglePrivacyMode}
@@ -1098,7 +1384,7 @@ export default function WealthPage() {
       />
 
       {/* Tab bar */}
-      <div style={{ display:'flex', gap:4, marginBottom:24, background:'var(--bg-surface-2)', padding:4, borderRadius:14, width:'fit-content' }}>
+      <div style={{ display:'flex', gap:4, marginBottom:24, background:'var(--bg-surface-2)', padding:4, borderRadius:14, width:'fit-content', overflowX:'auto' }}>
         {TABS.map(tab => {
           const active = activeTab === tab.id;
           return (
@@ -1109,7 +1395,7 @@ export default function WealthPage() {
                 background: active ? 'var(--bg-surface)' : 'transparent',
                 color: active ? 'var(--text-primary)' : 'var(--text-muted)',
                 boxShadow: active ? 'var(--shadow-sm)' : 'none',
-                transition:'all 0.2s',
+                transition:'all 0.2s', whiteSpace:'nowrap',
               }}>
               <tab.icon size={15}/>
               {tab.label}
@@ -1118,7 +1404,6 @@ export default function WealthPage() {
         })}
       </div>
 
-      {/* Tab content */}
       <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }} transition={{ duration:0.2 }}>
           {activeTab === 'overview'     && <OverviewTab     data={data} masked={isMasked} />}
