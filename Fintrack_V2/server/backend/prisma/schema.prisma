@@ -19,6 +19,7 @@ model User {
   netWorthSnapshots  NetWorthSnapshot[]
   mutualFundHoldings MutualFundHolding[]
   stockHoldings      StockHolding[]
+  insurances         Insurance[]
 }
 
 model Transaction {
@@ -134,4 +135,31 @@ model StockHolding {
 
   // Relations
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum InsuranceType {
+  HEALTH
+  TERM_LIFE
+  MOTOR
+  HOME
+}
+
+model Insurance {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  
+  type            InsuranceType
+  policyName      String
+  provider        String
+  
+  sumInsured      BigInt        // Coverage amount in cents
+  premiumAmount   BigInt        // Cost per cycle in cents
+  frequency       String        // "Monthly", "Quarterly", "Yearly"
+  
+  startDate       DateTime
+  nextDueDate     DateTime      // The system handles this
+  isActive        Boolean       @default(true)
+
+  createdAt       DateTime      @default(now())
 }

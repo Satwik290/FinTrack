@@ -46,6 +46,19 @@ export interface Liability {
   updatedAt: string;
 }
 
+export interface InsurancePolicy {
+  id: string;
+  type: 'HEALTH' | 'TERM_LIFE' | 'MOTOR' | 'HOME';
+  policyName: string;
+  provider: string;
+  sumInsured: number;
+  premiumAmount: number;
+  frequency: string;
+  startDate: string;
+  nextDueDate: string;
+  isActive: boolean;
+}
+
 export interface WealthSummary {
   // Core numbers
   netWorth: number;
@@ -74,6 +87,13 @@ export interface WealthSummary {
     stocks: string | null;
     mutualFunds: string | null;
     manualAssets: number | null;
+  };
+  // Insurance & HLV (Human Life Value)
+  insurancePolicies: InsurancePolicy[];
+  totalInsuranceCoverage: number;
+  hlvMetrics: {
+    requiredCoverage: number;
+    gap: number;
   };
 }
 
@@ -133,6 +153,43 @@ export function useDeleteLiability() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wealth-summary'] });
       toast.success('Liability removed');
+    },
+  });
+}
+
+/* ── Insurance mutations ────────────────────────── */
+export function useAddInsurance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: object) => api.post('/insurance', dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wealth-summary'] });
+      toast.success('Policy added! 🛡️');
+    },
+    onError: () => toast.error('Failed to add policy'),
+  });
+}
+
+export function usePayPremium() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/insurance/${id}/pay`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wealth-summary'] });
+      // Invalidate current month txns might be ideal but usually dashboard fetches fresh
+      toast.success('Premium marked as paid! Due date extended.');
+    },
+    onError: () => toast.error('Failed to process premium'),
+  });
+}
+
+export function useDeleteInsurance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/insurance/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wealth-summary'] });
+      toast.success('Policy removed');
     },
   });
 }

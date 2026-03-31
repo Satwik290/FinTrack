@@ -135,7 +135,7 @@ function AddStockModal({ onClose }: { onClose: () => void }) {
           {searching && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Searching…</p>}
           {results.length > 0 && !selected && (
             <div style={{ border: '1px solid var(--border)', borderRadius: 10, marginTop: 4, maxHeight: 160, overflowY: 'auto', background: 'var(--bg-surface)' }}>
-              {results.map(r => (
+              {(results||[]).filter(Boolean).map((r: any) => (
                 <button key={r.ticker} onClick={() => { setSelected(r); setSearchQ(r.name); }}
                   style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}

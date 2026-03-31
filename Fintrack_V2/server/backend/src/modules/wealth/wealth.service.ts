@@ -27,7 +27,7 @@ export class WealthService {
    * ──────────────────────────────────────────────── */
   async getFullSummary(userId: string) {
     // 1. Fetch each module's data via their own service
-    const [mfPortfolio, stockPortfolio, assets, liabilities] =
+    const [mfPortfolio, stockPortfolio, assets, liabilities, budgets, insurances] =
       await Promise.all([
         this.mfService.getPortfolio(userId),
         this.stocksService.getPortfolio(userId),
@@ -38,6 +38,12 @@ export class WealthService {
         this.prisma.liability.findMany({
           where: { userId },
           orderBy: { interestRate: 'desc' },
+        }),
+        this.prisma.budget.findMany({
+          where: { userId },
+        }),
+        this.prisma.insurance.findMany({
+          where: { userId, isActive: true },
         }),
       ]);
 
@@ -136,6 +142,19 @@ export class WealthService {
           )
         : 100;
 
+    // 9. Insurance & HLV (Human Life Value)
+    const annualExpenses = budgets.reduce((sum, b) => sum + b.limit, 0) * 12;
+    const liquidAssets = stockCurrentValue + mfCurrentValue;
+    const requiredCoverage = Math.max((annualExpenses * 20) + totalLiabilities - liquidAssets, 0);
+    const totalInsuranceCoverage = insurances.reduce((sum, inc) => sum + Number(inc.sumInsured) / 100, 0);
+    const gap = Math.max(requiredCoverage - totalInsuranceCoverage, 0);
+
+    const formattedInsurances = insurances.map((i) => ({
+      ...i,
+      sumInsured: Number(i.sumInsured) / 100,
+      premiumAmount: Number(i.premiumAmount) / 100,
+    }));
+
     return {
       // Core numbers
       netWorth: Math.round(netWorth * 100) / 100,
@@ -174,6 +193,13 @@ export class WealthService {
                 return t > l ? t : l;
               }, 0)
             : null,
+      },
+      // Insurance
+      insurancePolicies: formattedInsurances,
+      totalInsuranceCoverage: Math.round(totalInsuranceCoverage * 100) / 100,
+      hlvMetrics: {
+        requiredCoverage: Math.round(requiredCoverage * 100) / 100,
+        gap: Math.round(gap * 100) / 100,
       },
     };
   }

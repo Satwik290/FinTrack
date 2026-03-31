@@ -12,6 +12,7 @@ import { WealthModule } from './modules/wealth/wealth.module';
 import { MutualFundsModule } from './modules/mutual-funds/mutual-funds.module';
 import { StocksModule } from './modules/stocks/stocks.module';
 import { SharedModule } from './modules/shared/shared.module';
+import { InsuranceModule } from './modules/insurance/insurance.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SharedModule } from './modules/shared/shared.module';
     WealthModule,
     MutualFundsModule,
     StocksModule,
+    InsuranceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

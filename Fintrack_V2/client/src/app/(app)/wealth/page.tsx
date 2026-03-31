@@ -16,8 +16,9 @@ import {
   useAddLiability, useDeleteLiability,
   useAddMFLumpsum, useAddMFSip, useDeleteMFHolding,
   useAddStock, useDeleteStock,
+  useAddInsurance, useDeleteInsurance, usePayPremium,
   useMFNavHistory, useMFSearch, useStockSearch,
-  type WealthSummary, type Liability,
+  type WealthSummary, type Liability, type InsurancePolicy
 } from '@/hooks/usewealth';
 import { useWealthStore } from '@/store/useWealthStore';
 import api from '@/lib/api';
@@ -51,7 +52,7 @@ function timeAgo(iso: string | null | number): string {
 }
 
 /* ─── Tab config ─────────────────────────────────── */
-type Tab = 'overview' | 'stocks' | 'mutual-funds' | 'assets' | 'liabilities';
+type Tab = 'overview' | 'stocks' | 'mutual-funds' | 'assets' | 'liabilities' | 'insurance';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'overview',      label: 'Overview',      icon: Landmark   },
@@ -59,6 +60,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'mutual-funds',  label: 'Mutual Funds',   icon: BookOpen   },
   { id: 'assets',        label: 'Assets',         icon: Shield     },
   { id: 'liabilities',   label: 'Liabilities',    icon: AlertTriangle },
+  { id: 'insurance',     label: 'Insurance',      icon: Shield     },
 ];
 
 const LIABILITY_CATEGORIES = ['Home Loan','Car Loan','Personal Loan','Education Loan','Credit Card','Other'];
@@ -705,6 +707,85 @@ function LiabilitiesTab({ data, masked }: { data: WealthSummary; masked: boolean
 }
 
 /* ══════════════════════════════════════════════════
+ *  INSURANCE TAB
+ * ══════════════════════════════════════════════════ */
+function InsuranceTab({ data, masked }: { data: WealthSummary; masked: boolean }) {
+  const deletePolicy = useDeleteInsurance();
+  const payPremium = usePayPremium();
+  const [showModal, setShowModal] = useState(false);
+
+  const POLICY_ICONS: Record<string, string> = {
+    TERM_LIFE: '🛡️', HEALTH: '🏥', MOTOR: '🚗', HOME: '🏠'
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div>
+          <p style={{ fontWeight:700, fontSize:15, color:'var(--text-primary)' }}>Insurance Vault</p>
+          <p style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
+            Total Coverage: <span style={{ fontFamily:MONO, fontWeight:700, color:GAIN }}>{fmtINR(data.totalInsuranceCoverage, masked)}</span>
+          </p>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={()=>setShowModal(true)}>
+          <Plus size={14}/> Add Policy
+        </button>
+      </div>
+
+      {data.insurancePolicies.length === 0
+        ? <EmptyState icon="🛡️" message="No insurance policies found. Protect your wealth!" />
+        : (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:16 }}>
+            {data.insurancePolicies.map((p, i) => (
+              <motion.div key={p.id} initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.06 }}
+                className="card" style={{ padding:20, display:'flex', flexDirection:'column' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, marginBottom:16 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <div style={{ width:40, height:40, borderRadius:10, background:'rgba(52,211,153,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>
+                      {POLICY_ICONS[p.type] ?? '📋'}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight:700, fontSize:14, color:'var(--text-primary)' }}>{p.policyName}</p>
+                      <p style={{ fontSize:11, color:'var(--text-muted)' }}>{p.provider}</p>
+                    </div>
+                  </div>
+                  <button className="btn btn-icon" onClick={()=>deletePolicy.mutate(p.id)} style={{ width:28, height:28, color:'var(--danger)' }}><Trash2 size={12}/></button>
+                </div>
+
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+                  <div>
+                    <p style={{ fontSize:11, color:'var(--text-muted)' }}>Sum Insured</p>
+                    <p style={{ fontFamily:MONO, fontSize:16, fontWeight:700, color:'var(--text-primary)' }}>{fmtINR(p.sumInsured, masked)}</p>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <p style={{ fontSize:11, color:'var(--text-muted)' }}>Premium ({p.frequency.toLowerCase()})</p>
+                    <p style={{ fontFamily:MONO, fontSize:14, fontWeight:700, color:LOSS }}>{fmtINR(p.premiumAmount, masked)}</p>
+                  </div>
+                </div>
+
+                <div style={{ background:'var(--bg-surface-2)', borderRadius:10, padding:12, marginTop:'auto' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                    <span style={{ fontSize:11, color:'var(--text-muted)' }}>Next Due</span>
+                    <span style={{ fontFamily:MONO, fontSize:12, fontWeight:700, color:'var(--text-primary)' }}>{new Date(p.nextDueDate).toLocaleDateString()}</span>
+                  </div>
+                  <button onClick={()=>payPremium.mutate(p.id)} disabled={payPremium.isPending}
+                    className="btn btn-sm" style={{ width:'100%', border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', marginTop:4, fontSize:12 }}>
+                    Mark as Paid {payPremium.isPending && <Loader2 size={12} className="animate-spin ml-2"/>}
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+      <AnimatePresence>
+        {showModal && <AddInsuranceModal onClose={()=>setShowModal(false)} />}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
  *  MODALS
  * ══════════════════════════════════════════════════ */
 function AddStockModal({ onClose }: { onClose:()=>void }) {
@@ -726,7 +807,7 @@ function AddStockModal({ onClose }: { onClose:()=>void }) {
         ))}
       </div>
       <SearchDropdown label={`Search ${EXCHANGE_CFG[exchange].label}`} query={searchQ} setQuery={setSearchQ}
-        results={results.map(r=>({key:r.ticker, primary:r.ticker, secondary:r.name}))}
+        results={(results||[]).filter(Boolean).map((r: any)=>({key:r.ticker, primary:r.ticker, secondary:r.name}))}
         onSelect={r=>{setSelected({ticker:r.key,name:r.primary==='NSE'?r.secondary:r.primary});setSearchQ(r.secondary);}} />
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginTop:14 }}>
         <FormField label="Quantity" value={qty} onChange={setQty} type="number" placeholder="10" />
@@ -764,7 +845,7 @@ function AddMFModal({ onClose }: { onClose:()=>void }) {
         ))}
       </div>
       <SearchDropdown label="Search Scheme" query={searchQ} setQuery={setSearchQ}
-        results={results.map(r=>({key:r.schemeCode, primary:r.schemeName, secondary:`#${r.schemeCode}`}))}
+        results={(results||[]).filter(Boolean).map((r: any)=>({key:r.schemeCode, primary:r.schemeName, secondary:`#${r.schemeCode}`}))}
         onSelect={r=>{setSelected({schemeCode:r.key,schemeName:r.primary});setSearchQ(r.primary);}} />
       {mode==='lumpsum' ? (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginTop:14 }}>
@@ -836,6 +917,50 @@ function AddLiabilityModal({ onClose }: { onClose:()=>void }) {
         emiInCents:f.emi?Math.round(parseFloat(f.emi)*100):undefined,
         dueDate:f.dueDate||undefined,
       },{onSuccess:onClose})} disabled={!f.loanName||!f.totalPrincipal||!f.remainingBalance||!f.interestRate} loading={addLiability.isPending} label="Add Liability" />
+    </Modal>
+  );
+}
+
+function AddInsuranceModal({ onClose }: { onClose:()=>void }) {
+  const [f, setF] = useState({ policyName:'', provider:'', type:'TERM_LIFE', sumInsured:'', premiumAmount:'', frequency:'ANNUAL', startDate:new Date().toISOString().split('T')[0] });
+  const addPolicy = useAddInsurance();
+  return (
+    <Modal title="Add Insurance Policy" onClose={onClose}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+        <div style={{ gridColumn:'span 2' }}>
+          <FormField label="Policy Name" value={f.policyName} onChange={v=>setF(p=>({...p,policyName:v}))} placeholder="e.g. Max Life Term Plan" />
+        </div>
+        <div>
+          <FormField label="Provider" value={f.provider} onChange={v=>setF(p=>({...p,provider:v}))} placeholder="e.g. Max Life" />
+        </div>
+        <div>
+          <label style={LS}>Type</label>
+          <select className="input" value={f.type} onChange={e=>setF(p=>({...p,type:e.target.value}))}>
+            {['TERM_LIFE','HEALTH','MOTOR','HOME'].map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <FormField label="Sum Insured (₹)" value={f.sumInsured} onChange={v=>setF(p=>({...p,sumInsured:v}))} type="number" placeholder="10000000" />
+        </div>
+        <div>
+          <label style={LS}>Frequency</label>
+          <select className="input" value={f.frequency} onChange={e=>setF(p=>({...p,frequency:e.target.value}))}>
+            {['ANNUAL','SEMI_ANNUAL','QUARTERLY','MONTHLY'].map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <FormField label="Premium Amount (₹)" value={f.premiumAmount} onChange={v=>setF(p=>({...p,premiumAmount:v}))} type="number" placeholder="12000" />
+        </div>
+        <div>
+          <FormField label="Start Date" value={f.startDate} onChange={v=>setF(p=>({...p,startDate:v}))} type="date" />
+        </div>
+      </div>
+      <ModalActions onClose={onClose} onSubmit={()=>addPolicy.mutate({
+        policyName:f.policyName, provider:f.provider, type:f.type as any, frequency:f.frequency as any,
+        sumInsuredInCents:Math.round(parseFloat(f.sumInsured)*100),
+        premiumInCents:Math.round(parseFloat(f.premiumAmount)*100),
+        startDate:f.startDate,
+      },{onSuccess:onClose})} disabled={!f.policyName||!f.provider||!f.sumInsured||!f.premiumAmount} loading={addPolicy.isPending} label="Add Policy" />
     </Modal>
   );
 }
@@ -1001,6 +1126,7 @@ export default function WealthPage() {
           {activeTab === 'mutual-funds' && <MutualFundsTab  data={data} masked={isMasked} />}
           {activeTab === 'assets'       && <AssetsTab       data={data} masked={isMasked} />}
           {activeTab === 'liabilities'  && <LiabilitiesTab  data={data} masked={isMasked} />}
+          {activeTab === 'insurance'    && <InsuranceTab    data={data} masked={isMasked} />}
         </motion.div>
       </AnimatePresence>
 
