@@ -146,37 +146,38 @@ enum InsuranceType {
 }
 
 model Insurance {
-  id              String        @id @default(cuid())
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  type            InsuranceType
-  policyName      String
-  provider        String
+  type          String   // e.g., 'HEALTH', 'TERM_LIFE', 'MOTOR', 'HOME'
+  policyName    String
+  provider      String
   
-  sumInsured      BigInt        // Coverage amount in cents
-  premiumAmount   BigInt        // Cost per cycle in cents
-  frequency       String        // "Monthly", "Quarterly", "Yearly"
+  sumInsured    BigInt   // Coverage amount in cents
+  premiumAmount BigInt   // Cost per cycle in cents
+  frequency     String   // "Monthly", "Quarterly", "Yearly"
   
-  startDate       DateTime
-  nextDueDate     DateTime      // The system handles this
-  isActive        Boolean       @default(true)
+  startDate     DateTime
+  nextDueDate   DateTime // The system handles this
+  isActive      Boolean  @default(true)
 
-  createdAt       DateTime      @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Goal {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  title     String
-  target    Float
-  current   Float    @default(0) // We will make this dynamic later
-  deadline  DateTime
-  icon      String   @default("🎯")
-  color     String   @default("#6366f1")
+  name          String
+  targetAmount  Float
+  currentAmount Float    @default(0) 
+  targetDate    DateTime?
+  icon          String?  @default("🎯")
+  color         String?  @default("#6366f1")
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
