@@ -16,6 +16,8 @@ const NAV = [
   { href: '/budget',       icon: PiggyBank,       label: 'Budget' },
   { href: '/insights',     icon: Sparkles,        label: 'AI Insights' },
   { href: '/goals',        icon: Target,          label: 'Goals' },
+   { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
+  { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
 ];
 
 const BOTTOM_NAV = [

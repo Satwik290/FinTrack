@@ -18,8 +18,8 @@ const NAV = [
   { href: "/budget",       icon: PiggyBank,       label: "Budget"        },
   { href: "/insights",     icon: Sparkles,        label: "Insights"      },
   { href: "/goals",        icon: Target,          label: "Goals"         },
-  // { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
-  // { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
+  { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
+  { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
   { href: "/wealth",       icon: Landmark,        label: "Wealth"        },
   { href: "/copilot",      icon: Bot,             label: "Copilot"       },
 ];
@@ -30,8 +30,8 @@ const BOTTOM_NAV_ITEMS = [
   { href: "/budget",       icon: PiggyBank,       label: "Budget"        },
   { href: "/insights",     icon: Sparkles,        label: "Insights"      },
   { href: "/goals",        icon: Target,          label: "Goals"         },
-  // { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
-  // { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
+  { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
+  { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
   { href: "/wealth",       icon: Landmark,        label: "Wealth" },
   { href: "/copilot",      icon: Bot,             label: "Copilot" },
 ];

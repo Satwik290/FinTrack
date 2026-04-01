@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-// 1. THE FIX: Point directly to your custom generated output!
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -11,7 +10,8 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  goal: any;
+  // ❌ REMOVED: goal: any;
+
   constructor(config: ConfigService) {
     const pool = new Pool({
       connectionString: config.get<string>('DATABASE_URL'),
