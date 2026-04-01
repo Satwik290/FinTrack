@@ -11,6 +11,7 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  goal: any;
   constructor(config: ConfigService) {
     const pool = new Pool({
       connectionString: config.get<string>('DATABASE_URL'),

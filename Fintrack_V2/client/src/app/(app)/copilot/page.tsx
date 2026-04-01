@@ -1,155 +1,120 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Square, CornerDownLeft, Sparkles, Volume2, VolumeX, ChevronDown, User, Bot } from "lucide-react";
+import api from "@/lib/api";
+import {
+  Mic, Square, CornerDownLeft, Sparkles,
+  Volume2, VolumeX, User, Trash2,
+} from "lucide-react";
 import { useSpeechController, type CopilotState } from "./useSpeechController";
 
 /* ═══════════════════════════════════════════════════════════════════
- *  DESIGN — "Neural Command Center"
- *  Deep space dark · teal bioluminescence · cinematic depth
- *  Inspired by: Bloomberg Terminal meets Jarvis
+ *  TOKEN CONSTANTS — all colours use CSS vars for theme support
  * ═══════════════════════════════════════════════════════════════════ */
-const C = {
-  base:     '#060810',
-  surface:  '#0D1120',
-  card:     '#111827',
-  border:   'rgba(255,255,255,0.06)',
-  indigo:   '#818CF8',
-  violet:   '#A78BFA',
-  teal:     '#2DD4BF',
-  gain:     '#34D399',
-  loss:     '#F87171',
-  warn:     '#FBBF24',
-  text:     '#E2E8F0',
-  muted:    '#64748B',
-  dim:      '#1E293B',
-} as const;
+const ACCENT  = '#6366f1';
+const ACCENT2 = '#8b5cf6';
+const GAIN    = '#10b981';
+const WARN    = '#f59e0b';
+const LOSS    = '#ef4444';
+const MONO    = "'Space Mono', monospace";
 
-const MONO = "'Space Mono', monospace";
-
-/* ── Status config ───────────────────────────────── */
-const STATUS_META: Record<CopilotState, { label: string; color: string; pulseColor: string }> = {
-  idle:      { label: "Ready for your command",       color: C.muted,   pulseColor: 'rgba(100,116,139,0.3)' },
-  listening: { label: "Listening...",                  color: C.gain,    pulseColor: 'rgba(52,211,153,0.4)'  },
-  thinking:  { label: "Analyzing your financials...", color: C.warn,    pulseColor: 'rgba(251,191,36,0.35)' },
-  speaking:  { label: "Copilot speaking",             color: C.indigo,  pulseColor: 'rgba(129,140,248,0.4)' },
+const STATUS_META: Record<CopilotState, { label: string; color: string; pulse: string }> = {
+  idle:      { label: "Ready for your command",       color: 'var(--text-muted)', pulse: 'rgba(148,163,184,0.12)' },
+  listening: { label: "Listening...",                  color: GAIN,                pulse: 'rgba(16,185,129,0.18)'  },
+  thinking:  { label: "Analyzing your financials...", color: WARN,                pulse: 'rgba(245,158,11,0.18)'  },
+  speaking:  { label: "Copilot speaking",             color: ACCENT,              pulse: 'rgba(99,102,241,0.18)'  },
 };
 
-/* ── Animated waveform bars ──────────────────────── */
+type Message = { role: 'user' | 'copilot'; text: string };
+
+const INITIAL_MESSAGE: Message = {
+  role: 'copilot',
+  text: "Hello! I'm your AI Wealth Copilot — a CA and CFA rolled into one. I can analyze your portfolio, flag budget anomalies, and help you plan your goals. What would you like to know?",
+};
+
+const LOADING_MESSAGE: Message = {
+  role: 'copilot',
+  text: "Analyzing your latest financial snapshot...",
+};
+
+/* ── Waveform ────────────────────────────────────── */
 function Waveform({ active, color }: { active: boolean; color: string }) {
-  const bars = 12;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 32 }}>
-      {Array.from({ length: bars }).map((_, i) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 28 }}>
+      {Array.from({ length: 10 }).map((_, i) => (
         <motion.div
           key={i}
-          animate={active ? {
-            scaleY: [0.2, Math.random() * 0.8 + 0.4, 0.2],
-            opacity: [0.4, 1, 0.4],
-          } : { scaleY: 0.15, opacity: 0.2 }}
-          transition={active ? {
-            duration: 0.5 + (i % 3) * 0.15,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: i * 0.04,
-          } : { duration: 0.3 }}
-          style={{
-            width: 3,
-            height: '100%',
-            borderRadius: 2,
-            background: color,
-            transformOrigin: 'center',
-          }}
+          animate={active
+            ? { scaleY: [0.15, 0.55 + (i % 3) * 0.28, 0.15], opacity: [0.5, 1, 0.5] }
+            : { scaleY: 0.15, opacity: 0.22 }}
+          transition={active
+            ? { duration: 0.5 + (i % 3) * 0.13, repeat: Infinity, ease: 'easeInOut', delay: i * 0.05 }
+            : { duration: 0.3 }}
+          style={{ width: 3, height: '100%', borderRadius: 2, background: color, transformOrigin: 'center' }}
         />
       ))}
     </div>
   );
 }
 
-/* ── Central orb ─────────────────────────────────── */
+/* ── Orb ─────────────────────────────────────────── */
 function CopilotOrb({ status }: { status: CopilotState }) {
-  const meta = STATUS_META[status];
+  const meta     = STATUS_META[status];
+  const isActive = status !== 'idle';
 
   return (
-    <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0 }}>
-      {/* Outer pulse ring */}
+    <div style={{ position: 'relative', width: 140, height: 140, flexShrink: 0 }}>
+      {/* outer pulse */}
       <motion.div
-        animate={status !== 'idle' ? {
-          scale: [1, 1.35, 1],
-          opacity: [0.15, 0.4, 0.15],
-        } : { scale: 1, opacity: 0 }}
-        transition={{ duration: status === 'speaking' ? 0.7 : 1.4, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute', inset: -24, borderRadius: '50%',
-          background: `radial-gradient(circle, ${meta.pulseColor} 0%, transparent 70%)`,
-        }}
+        animate={isActive
+          ? { scale: [1, 1.45, 1], opacity: [0.1, 0.3, 0.1] }
+          : { scale: 1, opacity: 0 }}
+        transition={{ duration: status === 'speaking' ? 0.75 : 1.6, repeat: Infinity }}
+        style={{ position: 'absolute', inset: -22, borderRadius: '50%',
+          background: `radial-gradient(circle, ${meta.pulse} 0%, transparent 70%)` }}
       />
-      {/* Middle ring */}
+      {/* border ring */}
       <motion.div
-        animate={status !== 'idle' ? {
-          scale: [1, 1.15, 1],
-          opacity: [0.2, 0.5, 0.2],
-        } : { scale: 1, opacity: 0.1 }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-        style={{
-          position: 'absolute', inset: -8, borderRadius: '50%',
-          border: `1px solid ${meta.color}`,
-        }}
+        animate={isActive
+          ? { scale: [1, 1.1, 1], opacity: [0.25, 0.65, 0.25] }
+          : { opacity: 0.12 }}
+        transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+        style={{ position: 'absolute', inset: -4, borderRadius: '50%',
+          border: `1.5px solid ${meta.color}` }}
       />
-
-      {/* Thinking spinner */}
+      {/* thinking dash */}
       {status === 'thinking' && (
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-          style={{
-            position: 'absolute', inset: -4, borderRadius: '50%',
-            border: `1.5px dashed ${C.warn}60`,
-          }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+          style={{ position: 'absolute', inset: -2, borderRadius: '50%',
+            border: `1.5px dashed ${WARN}55` }}
         />
       )}
-
-      {/* Core orb */}
+      {/* core */}
       <div style={{
         position: 'absolute', inset: 0, borderRadius: '50%',
-        background: `radial-gradient(135deg at 35% 35%, ${
-          status === 'listening' ? '#0f3d2e' :
-          status === 'thinking'  ? '#2d2000' :
-          status === 'speaking'  ? '#1a1040' :
-          '#0d1525'
-        } 0%, #070b15 65%)`,
-        border: `1.5px solid ${meta.color}30`,
-        boxShadow: `0 0 40px ${meta.pulseColor}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+        background: 'var(--bg-surface-2)',
+        border: `1.5px solid var(--border)`,
+        boxShadow: `0 0 28px ${meta.pulse}, var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.07)`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         overflow: 'hidden',
       }}>
-        {/* Inner glow */}
         <div style={{
-          position: 'absolute', top: '20%', left: '20%',
-          width: '40%', height: '40%', borderRadius: '50%',
-          background: `radial-gradient(circle, ${meta.color}25 0%, transparent 70%)`,
+          position: 'absolute', top: '15%', left: '15%', width: '38%', height: '38%',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${meta.color}22 0%, transparent 70%)`,
         }}/>
-
-        {/* Icon */}
-        <motion.div
-          animate={{ scale: status === 'speaking' ? [1, 1.1, 1] : 1 }}
-          transition={{ duration: 0.6, repeat: Infinity }}
-        >
+        <motion.div animate={{ scale: status === 'speaking' ? [1, 1.18, 1] : 1 }}
+          transition={{ duration: 0.7, repeat: Infinity }}>
           {status === 'thinking' ? (
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            >
-              <Sparkles size={36} color={C.warn} strokeWidth={1.5}/>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
+              <Sparkles size={32} color={WARN} strokeWidth={1.5}/>
             </motion.div>
           ) : (
-            <Sparkles
-              size={36}
-              color={meta.color}
-              strokeWidth={1.5}
-              style={{ filter: `drop-shadow(0 0 10px ${meta.color})` }}
-            />
+            <Sparkles size={32} color={meta.color} strokeWidth={1.5}
+              style={{ filter: `drop-shadow(0 0 8px ${meta.color}80)` }}/>
           )}
         </motion.div>
       </div>
@@ -158,59 +123,50 @@ function CopilotOrb({ status }: { status: CopilotState }) {
 }
 
 /* ── Message bubble ──────────────────────────────── */
-function MessageBubble({
-  role, text, isNew,
-}: { role: 'user' | 'copilot'; text: string; isNew?: boolean }) {
+function MessageBubble({ role, text }: Message) {
   const isUser = role === 'user';
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12, scale: 0.97 }}
+      initial={{ opacity: 0, y: 10, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
       style={{
         display: 'flex',
-        gap: 10,
         flexDirection: isUser ? 'row-reverse' : 'row',
         alignItems: 'flex-start',
-        marginBottom: 12,
+        gap: 10, marginBottom: 14,
       }}
     >
-      {/* Avatar */}
+      {/* avatar */}
       <div style={{
-        width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-        background: isUser
-          ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-          : `radial-gradient(circle, ${C.indigo}30 0%, #1a1f35 100%)`,
-        border: `1px solid ${isUser ? '#6366f140' : C.indigo + '30'}`,
+        width: 30, height: 30, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+        background: isUser ? `linear-gradient(135deg,${ACCENT},${ACCENT2})` : 'var(--bg-surface-2)',
+        border: isUser ? 'none' : '1.5px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: isUser ? `0 2px 10px ${ACCENT}40` : 'none',
       }}>
         {isUser
-          ? <User size={14} color="#fff"/>
-          : <Sparkles size={13} color={C.indigo}/>
-        }
+          ? <User size={14} color="#fff" strokeWidth={2}/>
+          : <Sparkles size={13} color={ACCENT} strokeWidth={1.5}/>}
       </div>
 
-      {/* Bubble */}
+      {/* bubble */}
       <div style={{
-        maxWidth: '78%',
-        padding: '11px 16px',
+        maxWidth: '76%', padding: '11px 16px',
         borderRadius: isUser ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
-        background: isUser
-          ? 'linear-gradient(135deg, #3730a3, #4c1d95)'
-          : C.surface,
-        border: `1px solid ${isUser ? '#4338ca40' : C.border}`,
-        boxShadow: isUser
-          ? '0 4px 20px rgba(99,102,241,0.25)'
-          : '0 2px 12px rgba(0,0,0,0.3)',
+        background: isUser ? `linear-gradient(135deg,${ACCENT},${ACCENT2})` : 'var(--bg-surface-2)',
+        border: isUser ? 'none' : '1px solid var(--border)',
+        boxShadow: isUser ? `0 4px 16px ${ACCENT}30` : 'var(--shadow-sm)',
       }}>
         {!isUser && (
-          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: C.indigo, textTransform: 'uppercase', marginBottom: 5 }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5,
+            color: ACCENT, textTransform: 'uppercase', marginBottom: 5 }}>
             COPILOT
           </p>
         )}
         <p style={{
-          fontSize: 14, lineHeight: 1.65, color: C.text,
-          fontFamily: isUser ? 'inherit' : 'inherit',
+          fontSize: 14, lineHeight: 1.65, margin: 0,
+          color: isUser ? '#fff' : 'var(--text-primary)',
         }}>
           {text}
         </p>
@@ -222,19 +178,25 @@ function MessageBubble({
 /* ── Typing indicator ────────────────────────────── */
 function TypingIndicator() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 12 }}
-    >
-      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `radial-gradient(circle, ${C.indigo}30 0%, #1a1f35 100%)`, border: `1px solid ${C.indigo}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Sparkles size={13} color={C.indigo}/>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14 }}>
+      <div style={{
+        width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+        background: 'var(--bg-surface-2)', border: '1.5px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Sparkles size={13} color={ACCENT} strokeWidth={1.5}/>
       </div>
-      <div style={{ padding: '12px 16px', borderRadius: '4px 18px 18px 18px', background: C.surface, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{
+        padding: '12px 16px', borderRadius: '4px 18px 18px 18px',
+        background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', gap: 5,
+      }}>
         {[0, 1, 2].map(i => (
           <motion.div key={i}
-            animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+            animate={{ scale: [1, 1.55, 1], opacity: [0.35, 1, 0.35] }}
             transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-            style={{ width: 6, height: 6, borderRadius: '50%', background: C.indigo }}
+            style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT }}
           />
         ))}
       </div>
@@ -242,278 +204,301 @@ function TypingIndicator() {
   );
 }
 
-/* ── Suggested prompts ───────────────────────────── */
 const SUGGESTIONS = [
-  "How is my portfolio doing this month?",
+  "How is my portfolio doing?",
   "Am I on track with my budget?",
   "What's my savings rate?",
-  "Which investment is my best performer?",
-  "How much should I invest monthly for my goals?",
+  "Best performing investment?",
   "Analyze my debt situation",
+  "How much should I invest monthly?",
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
- *  MAIN PAGE
+ *  PAGE
  * ═══════════════════════════════════════════════════════════════════ */
 export default function CopilotPage() {
-  const { status, transcript, response, startListening, stopInteraction, submitTextQuery } =
-    useSpeechController();
+  const [messages, setMessages]     = useState<Message[]>([LOADING_MESSAGE]);
+  const [muted, setMuted]           = useState(false);
+  const [textInput, setTextInput]   = useState("");
+  const [showSugg, setShowSugg]     = useState(true);
+  const messagesEndRef              = useRef<HTMLDivElement>(null);
+  const inputRef                    = useRef<HTMLInputElement>(null);
 
-  const [textInput, setTextInput]         = useState("");
-  const [messages, setMessages]           = useState<{ role: 'user' | 'copilot'; text: string }[]>([]);
-  const [muted, setMuted]                 = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(true);
-  const messagesEndRef                    = useRef<HTMLDivElement>(null);
-  const inputRef                          = useRef<HTMLInputElement>(null);
-
-  // Track previous response to detect new ones
-  const prevResponseRef = useRef("");
-
-  // Add copilot messages when response changes
-  useEffect(() => {
-    if (response && response !== prevResponseRef.current && status !== 'thinking') {
-      prevResponseRef.current = response;
-      // Initial greeting — add as first copilot message
-      setMessages(prev => {
-        // Don't re-add the default greeting
-        if (prev.length === 0 && response.startsWith("Hello! I am")) {
-          return [{ role: 'copilot', text: response }];
-        }
-        // Don't double-add
-        const last = prev[prev.length - 1];
-        if (last?.role === 'copilot' && last.text === response) return prev;
-        return [...prev, { role: 'copilot', text: response }];
-      });
-    }
-  }, [response, status]);
-
-  // Add initial greeting once
-  useEffect(() => {
-    setMessages([{
-      role: 'copilot',
-      text: "Hello! I'm your AI Wealth Copilot — a CA and CFA rolled into one. I can analyze your portfolio performance, flag budget anomalies, and help you plan for your goals. What would you like to know?",
-    }]);
+  /* ── onReply — stable via useCallback, appends copilot message ── */
+  const onReply = useCallback((text: string) => {
+    setMessages(prev => [...prev, { role: 'copilot', text }]);
   }, []);
 
-  // Auto-scroll to bottom
+  /* ── Fetch Proactive Greeting ── */
+  useEffect(() => {
+    let active = true;
+    api.get("/copilot/greeting")
+      .then(res => {
+        if (!active) return;
+        const text = res.data?.data?.response ?? res.data?.response ?? INITIAL_MESSAGE.text;
+        setMessages([{ role: 'copilot', text }]);
+      })
+      .catch(() => {
+        if (!active) return;
+        setMessages([INITIAL_MESSAGE]);
+      });
+    return () => { active = false; };
+  }, []);
+
+  /* ── Hook — no longer exposes response/status as paired state ─── */
+  const { status, transcript, startListening, stopInteraction, submitTextQuery } =
+    useSpeechController({ onReply, muted });
+
+  /* ── Auto-scroll ── */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, status]);
+  }, [messages, status]); // these two are fine — fixed size array, both are always present
 
-  const handleSend = () => {
+  /* ── Send handlers ── */
+  const handleSend = useCallback(() => {
     const text = textInput.trim();
-    if (!text) return;
-    setShowSuggestions(false);
+    if (!text || status === 'thinking' || status === 'listening') return;
+    setShowSugg(false);
     setMessages(prev => [...prev, { role: 'user', text }]);
     submitTextQuery(text);
     setTextInput("");
-  };
+  }, [textInput, status, submitTextQuery]);
 
-  const handleSuggestion = (s: string) => {
-    setShowSuggestions(false);
+  const handleSuggestion = useCallback((s: string) => {
+    setShowSugg(false);
     setMessages(prev => [...prev, { role: 'user', text: s }]);
     submitTextQuery(s);
-  };
+  }, [submitTextQuery]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   const handleVoice = () => {
-    if (status !== 'idle') {
-      stopInteraction();
-    } else {
-      setShowSuggestions(false);
-      startListening();
-    }
+    if (status !== 'idle') stopInteraction();
+    else { setShowSugg(false); startListening(); }
   };
 
-  const meta = STATUS_META[status];
+  const clearChat = () => {
+    setMessages([INITIAL_MESSAGE]);
+    setShowSugg(true);
+  };
+
+  const meta     = STATUS_META[status];
   const isActive = status !== 'idle';
 
   return (
     <>
       <style>{`
-        @keyframes grid-pan {
-          from { transform: translateY(0); }
-          to   { transform: translateY(40px); }
+        .copilot-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+        .copilot-input:focus        { outline: none; }
+        .copilot-input:disabled     { opacity: 0.4; cursor: not-allowed; }
+        .sugg-chip {
+          padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 500;
+          background: var(--bg-surface-2); border: 1px solid var(--border);
+          color: var(--text-secondary); cursor: pointer; font-family: inherit;
+          transition: background 0.15s, border-color 0.15s, color 0.15s;
         }
-        .copilot-input::placeholder { color: rgba(100,116,139,0.7); }
-        .copilot-input:focus { outline: none; }
-        .suggestion-chip:hover {
-          background: rgba(129,140,248,0.15) !important;
-          border-color: rgba(129,140,248,0.4) !important;
-          color: #c4b5fd !important;
+        .sugg-chip:hover {
+          background: rgba(99,102,241,0.1);
+          border-color: rgba(99,102,241,0.35);
+          color: #818cf8;
         }
-        .msg-scroll::-webkit-scrollbar { width: 4px; }
+        .msg-scroll::-webkit-scrollbar       { width: 4px; }
         .msg-scroll::-webkit-scrollbar-track { background: transparent; }
-        .msg-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+        .msg-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+        @media (max-width: 768px) {
+          .copilot-layout { grid-template-columns: 1fr !important; }
+          .copilot-sidebar { display: none !important; }
+        }
       `}</style>
 
-      {/* Full-bleed dark background */}
-      <div style={{
-        margin: '-28px -32px', minHeight: 'calc(100vh - 64px)',
-        background: C.base, padding: '28px 32px',
-        display: 'flex', flexDirection: 'column',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        {/* Ambient grid background */}
-        <div style={{
-          position: 'absolute', inset: 0, opacity: 0.03, pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(rgba(129,140,248,1) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,1) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-          animation: 'grid-pan 8s linear infinite',
-        }}/>
-
-        {/* Ambient glows */}
-        <div style={{ position: 'absolute', top: '-20%', left: '10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)', pointerEvents: 'none' }}/>
-        <div style={{ position: 'absolute', bottom: '-10%', right: '5%',  width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(45,212,191,0.04) 0%, transparent 70%)', pointerEvents: 'none' }}/>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         {/* ── HEADER ── */}
         <motion.div
-          initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, position: 'relative', zIndex: 1 }}
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="page-header" style={{ marginBottom: 24 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
-              width: 46, height: 46, borderRadius: 14,
-              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              width: 46, height: 46, borderRadius: 14, flexShrink: 0,
+              background: `linear-gradient(135deg,${ACCENT},${ACCENT2})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 24px rgba(99,102,241,0.5)',
+              boxShadow: `0 4px 18px ${ACCENT}50`,
             }}>
               <Sparkles size={22} color="#fff" strokeWidth={1.5}/>
             </div>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: '-0.5px' }}>
-                AI Wealth Copilot
-              </h1>
-              <p style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
-                Powered by Gemini 1.5 Flash · CA + CFA intelligence
-              </p>
+              <h1 className="page-title">AI Wealth Copilot</h1>
+              <p className="page-subtitle">Gemini 1.5 Flash · CA + CFA dual-persona intelligence</p>
             </div>
           </div>
 
-          {/* Controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Mute toggle */}
-            <button
-              onClick={() => setMuted(m => !m)}
+            {/* Mute */}
+            <button onClick={() => setMuted(m => !m)} className="btn btn-icon"
               style={{
-                width: 36, height: 36, borderRadius: 10, border: `1px solid ${C.border}`,
-                background: muted ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.04)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: muted ? C.loss : C.muted, transition: 'all 0.2s',
+                color: muted ? LOSS : undefined,
+                background: muted ? 'rgba(239,68,68,0.1)' : undefined,
+                borderColor: muted ? 'rgba(239,68,68,0.28)' : undefined,
               }}
-              title={muted ? 'Unmute copilot' : 'Mute copilot'}
-            >
-              {muted ? <VolumeX size={15}/> : <Volume2 size={15}/>}
+              title={muted ? 'Unmute voice' : 'Mute voice'}>
+              {muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}
             </button>
 
-            {/* Live status pill */}
+            {/* Status pill */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '6px 14px', borderRadius: 99,
-              background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
+              background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
             }}>
               <motion.div
                 animate={{ opacity: isActive ? [1, 0.3, 1] : 1 }}
                 transition={{ duration: 1, repeat: Infinity }}
-                style={{ width: 7, height: 7, borderRadius: '50%', background: meta.color, boxShadow: `0 0 6px ${meta.color}` }}
+                style={{ width: 7, height: 7, borderRadius: '50%',
+                  background: meta.color, boxShadow: `0 0 6px ${meta.color}` }}
               />
-              <span style={{ fontSize: 11, fontWeight: 600, color: meta.color }}>{meta.label}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: meta.color, whiteSpace: 'nowrap' }}>
+                {meta.label}
+              </span>
             </div>
           </div>
         </motion.div>
 
-        {/* ── MAIN LAYOUT ── */}
-        <div style={{
-          flex: 1, display: 'grid',
-          gridTemplateColumns: '200px 1fr',
-          gap: 20, minHeight: 0, position: 'relative', zIndex: 1,
-        }}>
-
-          {/* ── LEFT: Orb + waveform ── */}
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'flex-start', gap: 20, paddingTop: 24,
-          }}>
+        {/* ── BODY ── */}
+        <div
+          className="copilot-layout"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '200px 1fr',
+            gap: 20,
+            alignItems: 'start',
+            minHeight: 'calc(100vh - 230px)',
+          }}
+        >
+          {/* ══ SIDEBAR ══ */}
+          <motion.div
+            className="copilot-sidebar"
+            initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, paddingTop: 24 }}
+          >
             {/* Orb */}
             <CopilotOrb status={status}/>
 
-            {/* Waveform */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {/* Waveform + label */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
               <Waveform active={status === 'listening' || status === 'speaking'} color={meta.color}/>
               <AnimatePresence mode="wait">
-                <motion.p
-                  key={status}
+                <motion.p key={status}
                   initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{ fontSize: 11, fontWeight: 600, color: meta.color, textAlign: 'center', letterSpacing: 0.3 }}
-                >
-                  {status === 'listening' ? '🎙 Listening' :
+                  style={{ fontSize: 11, fontWeight: 600, color: meta.color, textAlign: 'center' }}>
+                  {status === 'listening' ? '🎙 Listening'  :
                    status === 'thinking'  ? '⚡ Processing' :
-                   status === 'speaking'  ? '🔊 Speaking' : '● Standby'}
+                   status === 'speaking'  ? '🔊 Speaking'   : '● Standby'}
                 </motion.p>
               </AnimatePresence>
             </div>
 
-            {/* Persona badges */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+            {/* Persona cards */}
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { label: 'CA Mode', sub: 'Defense', color: C.teal,   icon: '🛡' },
-                { label: 'CFA Mode', sub: 'Offense', color: C.indigo, icon: '📈' },
+                { label: 'CA Mode',  sub: 'Defense · Budget & Risk', color: GAIN,   icon: '🛡️' },
+                { label: 'CFA Mode', sub: 'Offense · Growth & Goals', color: ACCENT, icon: '📈' },
               ].map(p => (
-                <div key={p.label} style={{
-                  padding: '8px 12px', borderRadius: 10, border: `1px solid ${p.color}20`,
-                  background: `${p.color}08`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>{p.icon}</span>
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: p.color }}>{p.label}</p>
-                      <p style={{ fontSize: 9, color: C.muted }}>{p.sub} intelligence</p>
-                    </div>
+                <div key={p.label} className="card" style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{p.icon}</span>
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: p.color, marginBottom: 1 }}>{p.label}</p>
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.sub}</p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* ── RIGHT: Chat + input ── */}
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            borderRadius: 20, border: `1px solid ${C.border}`,
-            background: 'rgba(13,17,32,0.8)',
-            backdropFilter: 'blur(20px)',
-            overflow: 'hidden', minHeight: 0,
-          }}>
+            {/* Tip box */}
+            <div style={{
+              width: '100%', padding: '12px 13px', borderRadius: 12,
+              background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
+            }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
+                letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>
+                Quick tips
+              </p>
+              {[
+                ['🎙', 'Tap mic for voice'],
+                ['↩', 'Enter to send text'],
+                ['🔇', 'Toggle voice output'],
+              ].map(([icon, tip]) => (
+                <div key={tip} style={{ display: 'flex', gap: 7, marginBottom: 5, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 11 }}>{icon}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{tip}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* ══ CHAT PANEL ══ */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="card"
+            style={{
+              display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden',
+              height: 'calc(100vh - 230px)', minHeight: 480,
+            }}
+          >
+            {/* Chat header bar */}
+            <div style={{
+              padding: '13px 20px', borderBottom: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <motion.div
+                  animate={{ opacity: isActive ? [1, 0.3, 1] : 1 }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                  style={{ width: 8, height: 8, borderRadius: '50%',
+                    background: isActive ? meta.color : GAIN,
+                    boxShadow: `0 0 7px ${isActive ? meta.color : GAIN}` }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Conversation
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  · {messages.length} message{messages.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <button onClick={clearChat} className="btn btn-ghost btn-sm"
+                style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Trash2 size={12}/> Clear
+              </button>
+            </div>
+
             {/* Message list */}
-            <div
-              className="msg-scroll"
-              style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}
-            >
+            <div className="msg-scroll"
+              style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px' }}>
               {messages.map((m, i) => (
-                <MessageBubble key={i} role={m.role} text={m.text} isNew={i === messages.length - 1}/>
+                <MessageBubble key={i} role={m.role} text={m.text}/>
               ))}
 
-              {/* Typing indicator */}
               {status === 'thinking' && <TypingIndicator/>}
 
-              {/* Listening transcript */}
+              {/* Live voice transcript preview */}
               <AnimatePresence>
                 {status === 'listening' && transcript && (
                   <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}
-                  >
+                    style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                     <div style={{
-                      padding: '8px 14px', borderRadius: '18px 4px 18px 18px',
-                      background: 'rgba(55,48,163,0.3)', border: '1px dashed rgba(99,102,241,0.4)',
-                      fontSize: 13, color: `${C.text}80`, fontStyle: 'italic',
+                      padding: '8px 14px',
+                      borderRadius: '18px 4px 18px 18px',
+                      background: 'var(--bg-surface-2)',
+                      border: `1px dashed ${ACCENT}55`,
+                      fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic',
                     }}>
-                      "{transcript}"
+                      &quot;{transcript}&quot;
                     </div>
                   </motion.div>
                 )}
@@ -524,26 +509,22 @@ export default function CopilotPage() {
 
             {/* Suggestions */}
             <AnimatePresence>
-              {showSuggestions && messages.length <= 1 && (
+              {showSugg && messages.length <= 1 && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                  style={{ padding: '0 24px 12px', overflow: 'hidden' }}
-                >
-                  <p style={{ fontSize: 10, color: C.muted, marginBottom: 8, letterSpacing: 0.5 }}>SUGGESTED QUERIES</p>
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{ padding: '6px 20px 12px', overflow: 'hidden', flexShrink: 0 }}>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
+                    letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 7 }}>
+                    Try asking
+                  </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {SUGGESTIONS.map((s, i) => (
-                      <motion.button
-                        key={s}
-                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className="suggestion-chip"
-                        onClick={() => handleSuggestion(s)}
-                        style={{
-                          padding: '5px 11px', borderRadius: 99, fontSize: 11, fontWeight: 500,
-                          background: 'rgba(129,140,248,0.08)', border: `1px solid rgba(129,140,248,0.2)`,
-                          color: C.muted, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit',
-                        }}
-                      >
+                      <motion.button key={s} className="sugg-chip"
+                        initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 + 0.05 }}
+                        onClick={() => handleSuggestion(s)}>
                         {s}
                       </motion.button>
                     ))}
@@ -552,20 +533,18 @@ export default function CopilotPage() {
               )}
             </AnimatePresence>
 
-            {/* Input bar */}
+            {/* ── Input bar ── */}
             <div style={{
-              padding: '12px 16px',
-              borderTop: `1px solid ${C.border}`,
-              background: 'rgba(6,8,16,0.5)',
+              padding: '11px 16px 14px', borderTop: '1px solid var(--border)',
+              flexShrink: 0, background: 'var(--bg-surface)',
             }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 14px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${status === 'listening' ? `${C.gain}50` : C.border}`,
-                transition: 'border-color 0.2s',
-                boxShadow: status === 'listening' ? `0 0 20px ${C.gain}15` : 'none',
+                padding: '8px 14px', borderRadius: 14,
+                background: 'var(--bg-surface-2)',
+                border: `1.5px solid ${status === 'listening' ? `${GAIN}55` : 'var(--border-strong)'}`,
+                boxShadow: status === 'listening' ? `0 0 14px ${GAIN}12` : 'var(--shadow-sm)',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
               }}>
                 <input
                   ref={inputRef}
@@ -573,8 +552,8 @@ export default function CopilotPage() {
                   type="text"
                   placeholder={
                     status === 'listening' ? "Listening via microphone..." :
-                    status === 'thinking'  ? "Processing your query..." :
-                    status === 'speaking'  ? "Copilot is speaking..." :
+                    status === 'thinking'  ? "Processing your query..."   :
+                    status === 'speaking'  ? "Copilot is speaking..."     :
                     "Ask anything about your finances..."
                   }
                   value={textInput}
@@ -583,58 +562,59 @@ export default function CopilotPage() {
                   disabled={status === 'listening' || status === 'thinking'}
                   style={{
                     flex: 1, background: 'transparent', border: 'none',
-                    color: C.text, fontSize: 14, padding: '6px 0',
-                    opacity: (status === 'listening' || status === 'thinking') ? 0.5 : 1,
+                    color: 'var(--text-primary)', fontSize: 14,
+                    padding: '5px 0', fontFamily: 'inherit',
                   }}
                 />
 
-                {/* Send / Mic button */}
                 <AnimatePresence mode="popLayout">
                   {textInput.trim() ? (
-                    <motion.button
-                      key="send"
+                    <motion.button key="send"
                       initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}
                       onClick={handleSend}
+                      className="btn btn-primary btn-icon"
+                      style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, padding: 0 }}
+                      title="Send (Enter)">
+                      <CornerDownLeft size={15}/>
+                    </motion.button>
+                  ) : isActive ? (
+                    <motion.button key="stop"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                      onClick={stopInteraction}
                       style={{
-                        width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                        width: 36, height: 36, borderRadius: 10, border: `1px solid ${LOSS}35`,
+                        background: `${LOSS}12`, cursor: 'pointer', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 0 16px rgba(99,102,241,0.4)', flexShrink: 0,
                       }}
-                    >
-                      <CornerDownLeft size={15} color="#fff"/>
+                      title="Stop">
+                      <Square size={14} color={LOSS} fill={LOSS}/>
                     </motion.button>
                   ) : (
-                    <motion.button
-                      key="mic"
+                    <motion.button key="mic"
                       initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
                       onClick={handleVoice}
-                      style={{
-                        width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                        background: isActive
-                          ? 'rgba(248,113,113,0.15)'
-                          : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: isActive
-                          ? '0 0 16px rgba(248,113,113,0.3)'
-                          : '0 0 16px rgba(99,102,241,0.4)',
-                        flexShrink: 0, transition: 'all 0.2s',
-                      }}
-                    >
-                      {isActive
-                        ? <Square size={14} color={C.loss} fill={C.loss}/>
-                        : <Mic size={15} color="#fff"/>
-                      }
+                      className="btn btn-primary btn-icon"
+                      style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, padding: 0 }}
+                      title="Voice input">
+                      <Mic size={15}/>
                     </motion.button>
                   )}
                 </AnimatePresence>
               </div>
 
-              <p style={{ fontSize: 10, color: `${C.muted}80`, textAlign: 'center', marginTop: 8 }}>
-                Your financial data is processed securely. Press <kbd style={{ fontFamily: MONO, fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}` }}>Enter</kbd> to send · <kbd style={{ fontFamily: MONO, fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}` }}>Mic</kbd> for voice
+              <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 7, opacity: 0.65 }}>
+                Financial data is processed securely ·{' '}
+                <kbd style={{ fontFamily: MONO, fontSize: 9, padding: '1px 5px', borderRadius: 4,
+                  background: 'var(--bg-surface-2)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                  Enter
+                </kbd>{' '}to send ·{' '}
+                <kbd style={{ fontFamily: MONO, fontSize: 9, padding: '1px 5px', borderRadius: 4,
+                  background: 'var(--bg-surface-2)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                  Mic
+                </kbd>{' '}for voice
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </>

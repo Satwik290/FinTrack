@@ -27,25 +27,31 @@ export class WealthService {
    * ──────────────────────────────────────────────── */
   async getFullSummary(userId: string) {
     // 1. Fetch each module's data via their own service
-    const [mfPortfolio, stockPortfolio, assets, liabilities, budgets, insurances] =
-      await Promise.all([
-        this.mfService.getPortfolio(userId),
-        this.stocksService.getPortfolio(userId),
-        this.prisma.asset.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.liability.findMany({
-          where: { userId },
-          orderBy: { interestRate: 'desc' },
-        }),
-        this.prisma.budget.findMany({
-          where: { userId },
-        }),
-        this.prisma.insurance.findMany({
-          where: { userId, isActive: true },
-        }),
-      ]);
+    const [
+      mfPortfolio,
+      stockPortfolio,
+      assets,
+      liabilities,
+      budgets,
+      insurances,
+    ] = await Promise.all([
+      this.mfService.getPortfolio(userId),
+      this.stocksService.getPortfolio(userId),
+      this.prisma.asset.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.liability.findMany({
+        where: { userId },
+        orderBy: { interestRate: 'desc' },
+      }),
+      this.prisma.budget.findMany({
+        where: { userId },
+      }),
+      this.prisma.insurance.findMany({
+        where: { userId, isActive: true },
+      }),
+    ]);
 
     // 2. Compute each pillar's total
     const mfCurrentValue = mfPortfolio.summary.totalCurrent;
@@ -145,8 +151,14 @@ export class WealthService {
     // 9. Insurance & HLV (Human Life Value)
     const annualExpenses = budgets.reduce((sum, b) => sum + b.limit, 0) * 12;
     const liquidAssets = stockCurrentValue + mfCurrentValue;
-    const requiredCoverage = Math.max((annualExpenses * 20) + totalLiabilities - liquidAssets, 0);
-    const totalInsuranceCoverage = insurances.reduce((sum, inc) => sum + Number(inc.sumInsured) / 100, 0);
+    const requiredCoverage = Math.max(
+      annualExpenses * 20 + totalLiabilities - liquidAssets,
+      0,
+    );
+    const totalInsuranceCoverage = insurances.reduce(
+      (sum, inc) => sum + Number(inc.sumInsured) / 100,
+      0,
+    );
     const gap = Math.max(requiredCoverage - totalInsuranceCoverage, 0);
 
     const formattedInsurances = insurances.map((i) => ({

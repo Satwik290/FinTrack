@@ -14,8 +14,8 @@ export interface InsightAlert {
 }
 
 export interface ForecastMonth {
-  month: string; // 'Jan 2026'
-  key: string; // 'YYYY-MM'
+  month: string;
+  key: string;
   projectedIncome: number;
   projectedExpense: number;
   projectedNet: number;
@@ -28,44 +28,66 @@ export interface ForecastMonth {
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /* ── 12-month forecast ────────────────────────── */
+  /* ══════════════════════════════════════════════
+   *  12-MONTH FORECAST
+   *  FIX: When there are no completed historic months
+   *  (new user / all data in current month), use the
+   *  current month's partial data as the baseline so
+   *  charts render real numbers instead of flat ₹0.
+   * ══════════════════════════════════════════════ */
   async getForecast(userId: string): Promise<ForecastMonth[]> {
-    // Fetch last 6 months of transactions for baseline
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const cutoff = sixMonthsAgo.toISOString().split('T')[0];
-
+    // Pull ALL transactions — no date filter, so new users with only
+    // current-month data still get real numbers
     const txns = await this.prisma.transaction.findMany({
-      where: { userId, date: { gte: cutoff } },
+      where: { userId },
       orderBy: { date: 'asc' },
     });
 
-    // Group by month
+    const now = new Date();
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // Group every transaction by YYYY-MM
     const byMonth: Record<string, { income: number; expense: number }> = {};
     for (const t of txns) {
-      const key = t.date.slice(0, 7); // YYYY-MM
+      const key = t.date.slice(0, 7);
       if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0 };
       if (t.type === 'income') byMonth[key].income += t.amount;
       else byMonth[key].expense += t.amount;
     }
 
-    // Compute averages from completed months (exclude current)
-    const now = new Date();
-    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const historicKeys = Object.keys(byMonth).filter((k) => k < currentKey);
+    // Completed months = any month strictly before current month
+    const historicKeys = Object.keys(byMonth)
+      .filter((k) => k < currentKey)
+      .sort();
 
-    const avgIncome =
-      historicKeys.length > 0
-        ? historicKeys.reduce((s, k) => s + byMonth[k].income, 0) /
-          historicKeys.length
-        : 0;
-    const avgExpense =
-      historicKeys.length > 0
-        ? historicKeys.reduce((s, k) => s + byMonth[k].expense, 0) /
-          historicKeys.length
-        : 0;
+    let avgIncome: number;
+    let avgExpense: number;
 
-    // Build 12-month array: 3 past + current + 8 future
+    if (historicKeys.length > 0) {
+      // Normal case: average over completed months
+      avgIncome =
+        historicKeys.reduce((s, k) => s + byMonth[k].income, 0) /
+        historicKeys.length;
+      avgExpense =
+        historicKeys.reduce((s, k) => s + byMonth[k].expense, 0) /
+        historicKeys.length;
+    } else {
+      // New user: no completed months yet — use current month as baseline.
+      // Scale partial-month data to full month for a realistic projection.
+      const dayOfMonth = now.getDate();
+      const daysInMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+      ).getDate();
+      const scaleFactor = dayOfMonth > 0 ? daysInMonth / dayOfMonth : 1;
+
+      const currentData = byMonth[currentKey] ?? { income: 0, expense: 0 };
+      avgIncome = currentData.income * scaleFactor;
+      avgExpense = currentData.expense * scaleFactor;
+    }
+
+    // Build 12-month window: 3 months back → current → 8 months forward
     const result: ForecastMonth[] = [];
     for (let i = -3; i <= 8; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
@@ -84,15 +106,19 @@ export class DashboardService {
         projectedIncome: Math.round(avgIncome),
         projectedExpense: Math.round(avgExpense),
         projectedNet: Math.round(avgIncome - avgExpense),
-        actualIncome: actual?.income,
-        actualExpense: actual?.expense,
+        // For past & current months, show actual numbers if they exist
+        actualIncome: actual?.income ?? (isPast || isCurrent ? 0 : undefined),
+        actualExpense: actual?.expense ?? (isPast || isCurrent ? 0 : undefined),
         isProjected: !isPast && !isCurrent,
       });
     }
+
     return result;
   }
 
-  /* ── Anomaly detection + insights ────────────── */
+  /* ══════════════════════════════════════════════
+   *  INSIGHTS / ANOMALY DETECTION
+   * ══════════════════════════════════════════════ */
   async getInsights(userId: string): Promise<InsightAlert[]> {
     const now = new Date();
     const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -105,23 +131,18 @@ export class DashboardService {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
     })();
 
-    const [thisMonthTxns, lastMonthTxns, sixMonthTxns, budgets] =
-      await Promise.all([
-        this.prisma.transaction.findMany({
-          where: { userId, date: { gte: thisMonthStart } },
-        }),
-        this.prisma.transaction.findMany({
-          where: { userId, date: { gte: lastMonthStart, lt: thisMonthStart } },
-        }),
-        this.prisma.transaction.findMany({
-          where: { userId, date: { gte: sixMonthsAgo, lt: thisMonthStart } },
-        }),
-        this.prisma.budget.findMany({ where: { userId } }),
-      ]);
+    const [thisMonthTxns, lastMonthTxns, budgets] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where: { userId, date: { gte: thisMonthStart } },
+      }),
+      this.prisma.transaction.findMany({
+        where: { userId, date: { gte: lastMonthStart, lt: thisMonthStart } },
+      }),
+      this.prisma.budget.findMany({ where: { userId } }),
+    ]);
 
     const insights: InsightAlert[] = [];
 
-    // Helper: group by category
     const groupByCat = (txns: typeof thisMonthTxns) => {
       const m: Record<string, number> = {};
       for (const t of txns.filter((x) => x.type === 'expense')) {
@@ -133,19 +154,7 @@ export class DashboardService {
     const thisCat = groupByCat(thisMonthTxns);
     const lastCat = groupByCat(lastMonthTxns);
 
-    // Compute 6-month category averages (per month)
-    const sixMonthsByCat: Record<string, number[]> = {};
-    for (const t of sixMonthTxns.filter((x) => x.type === 'expense')) {
-      const mo = t.date.slice(0, 7);
-      const key = `${t.category}__${mo}`;
-      if (!sixMonthsByCat[t.category]) sixMonthsByCat[t.category] = [];
-      const existing = sixMonthsByCat[t.category];
-      // aggregate by month
-      const idx = existing.findIndex((_, i) => i === 0); // simplified
-      sixMonthsByCat[t.category].push(t.amount);
-    }
-
-    // --- Anomaly: spending 2x above last month by category ---
+    // Anomaly: category spending 50%+ above last month
     for (const [cat, amount] of Object.entries(thisCat)) {
       const last = lastCat[cat] ?? 0;
       if (last > 0 && amount > last * 1.5) {
@@ -164,7 +173,7 @@ export class DashboardService {
       }
     }
 
-    // --- Budget alerts (80% / 100% thresholds) ---
+    // Budget alerts
     for (const budget of budgets) {
       const spent = thisCat[budget.category] ?? 0;
       const pct = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
@@ -201,13 +210,14 @@ export class DashboardService {
       }
     }
 
-    // --- Savings achievement ---
+    // Savings achievement / warning
     const totalIncome = thisMonthTxns
       .filter((t) => t.type === 'income')
       .reduce((s, t) => s + t.amount, 0);
     const totalExpense = thisMonthTxns
       .filter((t) => t.type === 'expense')
       .reduce((s, t) => s + t.amount, 0);
+
     if (totalIncome > 0) {
       const savingsRate = ((totalIncome - totalExpense) / totalIncome) * 100;
       if (savingsRate >= 40) {
@@ -219,7 +229,7 @@ export class DashboardService {
           body: `You've saved ${fmtINR(totalIncome - totalExpense)} out of ${fmtINR(totalIncome)}. Excellent discipline!`,
           action: 'View goals',
         });
-      } else if (savingsRate < 10 && totalIncome > 0) {
+      } else if (savingsRate < 10) {
         insights.push({
           id: 'savings-low',
           type: 'tip',
@@ -231,26 +241,39 @@ export class DashboardService {
       }
     }
 
-    // Sort: danger first, then warning, then success, then tip
-    const order = { danger: 0, warning: 1, success: 2, info: 3 };
+    const order: Record<string, number> = {
+      danger: 0,
+      warning: 1,
+      success: 2,
+      info: 3,
+    };
     return insights.sort((a, b) => order[a.severity] - order[b.severity]);
   }
 
-  /* ── Comparison data (MoM / YoY) ─────────────── */
+  /* ══════════════════════════════════════════════
+   *  MONTH-OVER-MONTH COMPARISONS
+   *  FIX: Pull ALL transactions (no hard cutoff) so
+   *  a user with only current-month data still sees
+   *  a real bar for that month instead of all zeros.
+   * ══════════════════════════════════════════════ */
   async getComparisons(userId: string) {
     const now = new Date();
-    const periods = [0, 1, 2, 3, 4, 5]
-      .map((i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        return {
-          key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-          label: d.toLocaleString('en-IN', { month: 'short', year: 'numeric' }),
-        };
-      })
-      .reverse();
 
+    // Build 6 months of period keys (oldest → newest)
+    const periods = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return {
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: d.toLocaleString('en-IN', {
+          month: 'short',
+          year: 'numeric',
+        }),
+      };
+    });
+
+    // Pull ALL transactions — no date filter so we never miss anything
     const txns = await this.prisma.transaction.findMany({
-      where: { userId, date: { gte: periods[0].key + '-01' } },
+      where: { userId },
     });
 
     return periods.map((p) => {

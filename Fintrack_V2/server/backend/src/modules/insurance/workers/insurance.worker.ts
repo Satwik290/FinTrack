@@ -32,8 +32,10 @@ export class InsuranceWorker {
       return;
     }
 
-    this.logger.warn(`Found ${expiring.length} policies expiring within 7 days.`);
-    
+    this.logger.warn(
+      `Found ${expiring.length} policies expiring within 7 days.`,
+    );
+
     // Future enhancement: Send email notifications or create in-app InsightAlerts
     for (const policy of expiring) {
       this.logger.warn(

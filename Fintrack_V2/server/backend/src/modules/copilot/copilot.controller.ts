@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { CopilotService } from './copilot.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -21,6 +21,15 @@ export class CopilotController {
     const response = await this.copilotService.processQuery(
       user.sub,
       transcript,
+    );
+    return { response };
+  }
+
+  @Get('greeting')
+  async greeting(@CurrentUser() user: RequestUser) {
+    const response = await this.copilotService.processQuery(
+      user.sub,
+      '__PROACTIVE_INSIGHTS__',
     );
     return { response };
   }

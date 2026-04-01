@@ -13,5 +13,6 @@ import { StocksModule } from '../stocks/stocks.module';
   ],
   controllers: [WealthController],
   providers: [WealthService, PriceWorker, SnapshotWorker],
+  exports: [WealthService],
 })
 export class WealthModule {}

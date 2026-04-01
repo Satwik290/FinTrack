@@ -64,7 +64,10 @@ export class InsuranceService {
 
     // 1. Calculate new next due date
     const currentDue = new Date(insurance.nextDueDate);
-    const newDueDate = this.calculateNextDueDate(currentDue, insurance.frequency);
+    const newDueDate = this.calculateNextDueDate(
+      currentDue,
+      insurance.frequency,
+    );
 
     // 2. Insert into Transactions
     await this.prisma.transaction.create({

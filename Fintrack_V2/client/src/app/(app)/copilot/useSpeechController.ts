@@ -9,37 +9,44 @@ export type CopilotState = "idle" | "listening" | "thinking" | "speaking";
 export interface UseSpeechControllerReturn {
   status: CopilotState;
   transcript: string;
-  response: string;
   startListening: () => void;
   stopInteraction: () => void;
   submitTextQuery: (text: string) => void;
 }
 
-export function useSpeechController(): UseSpeechControllerReturn {
-  const [status, setStatus]       = useState<CopilotState>("idle");
+export interface UseSpeechControllerOptions {
+  /** Fired with AI reply text — page appends to its own message list */
+  onReply: (text: string) => void;
+  /** When true, TTS output is suppressed */
+  muted?: boolean;
+}
+
+export function useSpeechController(
+  options: UseSpeechControllerOptions,
+): UseSpeechControllerReturn {
+  const [status, setStatus]         = useState<CopilotState>("idle");
   const [transcript, setTranscript] = useState("");
-  const [response, setResponse]   = useState(
-    "Hello! I am your AI Wealth Copilot. I can analyze your portfolio, keep you on budget, and help you grow your wealth. Just ask!"
-  );
 
-  // ── Stable refs so callbacks never go stale ──────────────────────
-  const recognitionRef  = useRef<any>(null);
-  const synthesisRef    = useRef<SpeechSynthesis | null>(null);
-  const statusRef       = useRef<CopilotState>("idle");
+  const recognitionRef = useRef<any>(null);
+  const synthesisRef   = useRef<SpeechSynthesis | null>(null);
+  const statusRef      = useRef<CopilotState>("idle");
 
-  // Keep statusRef in sync with state
+  // Always-fresh refs — updated every render, zero re-render cost
+  const onReplyRef = useRef(options.onReply);
+  const mutedRef   = useRef(options.muted ?? false);
+  onReplyRef.current = options.onReply;
+  mutedRef.current   = options.muted ?? false;
+
+  /* ── sync helper ─────────────────────────────── */
   const setStatusSynced = useCallback((s: CopilotState) => {
     statusRef.current = s;
     setStatus(s);
   }, []);
 
-  // ── Lazy-init Web APIs (avoids SSR crash) ────────────────────────
-  const ensureApis = useCallback(() => {
+  /* ── lazy Web API init ───────────────────────── */
+  const ensureApis = useCallback((): boolean => {
     if (typeof window === "undefined") return false;
-
-    if (!synthesisRef.current) {
-      synthesisRef.current = window.speechSynthesis;
-    }
+    if (!synthesisRef.current) synthesisRef.current = window.speechSynthesis;
 
     if (!recognitionRef.current) {
       const SR =
@@ -47,52 +54,44 @@ export function useSpeechController(): UseSpeechControllerReturn {
         (window as any).webkitSpeechRecognition;
       if (!SR) return false;
 
-      const rec = new SR();
-      rec.continuous      = false;
-      rec.interimResults  = false;
-      rec.lang            = "en-US";
+      const rec          = new SR();
+      rec.continuous     = false;
+      rec.interimResults = false;
+      rec.lang           = "en-US";
 
       rec.onresult = (event: any) => {
         const text: string = event.results[0][0].transcript;
         setTranscript(text);
-        handleQuery(text);       // safe — handleQuery is a stable ref below
+        // runQueryRef.current is always the latest version — no stale closure
+        runQueryRef.current(text);
       };
-
       rec.onerror = (event: any) => {
-        if (event.error !== "no-speech") {
-          toast.error("Microphone: " + event.error);
-        }
+        if (event.error !== "no-speech") toast.error("Mic: " + event.error);
         setStatusSynced("idle");
       };
-
       rec.onend = () => {
-        // Only fall back to idle if we're still "listening"
-        // (could already be "thinking" if result fired first)
         if (statusRef.current === "listening") setStatusSynced("idle");
       };
 
       recognitionRef.current = rec;
     }
-
     return true;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Speak helper ─────────────────────────────────────────────────
+  /* ── TTS ─────────────────────────────────────── */
   const speak = useCallback((text: string) => {
+    if (mutedRef.current) { setStatusSynced("idle"); return; }
     const synth = synthesisRef.current;
-    if (!synth) return;
+    if (!synth) { setStatusSynced("idle"); return; }
     synth.cancel();
 
-    const utter = new SpeechSynthesisUtterance(text);
-
-    // Pick a premium English voice when available
+    const utter  = new SpeechSynthesisUtterance(text);
     const voices = synth.getVoices();
     const voice  =
       voices.find(v => v.lang.startsWith("en") && v.name.includes("Premium")) ||
       voices.find(v => v.lang.startsWith("en")) ||
       null;
     if (voice) utter.voice = voice;
-
     utter.rate  = 1.05;
     utter.pitch = 1.0;
 
@@ -103,51 +102,56 @@ export function useSpeechController(): UseSpeechControllerReturn {
     synth.speak(utter);
   }, [setStatusSynced]);
 
-  // ── Core query handler (stable ref via useCallback) ───────────────
-  // FIX 1: handleQuery is defined with useCallback so rec.onresult can
-  //         call it without a stale closure.
-  // FIX 2: TransformInterceptor wraps the body as { success, data }.
-  //         The controller returns { response: string }, so the actual
-  //         text lives at res.data.data.response (not res.data.response).
-  const handleQuery = useCallback(async (text: string) => {
+  /* ── query runner (stored in ref so rec.onresult is never stale) ── */
+  const runQueryRef = useRef<(text: string) => void>(() => {});
+  runQueryRef.current = async (text: string) => {
     if (!text.trim()) { setStatusSynced("idle"); return; }
-
     setStatusSynced("thinking");
-    setResponse("");
 
     try {
       const res = await api.post("/copilot/chat", { transcript: text });
 
-      // TransformInterceptor wraps: { success: true, data: { response: "..." } }
-      // api.post returns the axios response, so res.data is the outer envelope.
+      // TransformInterceptor wraps as { success: true, data: { response: "..." } }
       const aiText: string =
-        res.data?.data?.response   // TransformInterceptor path  ✓
-        ?? res.data?.response      // fallback (no interceptor)   ✓
-        ?? "I couldn't get a response right now.";
+        res.data?.data?.response ??
+        res.data?.response        ??
+        "I couldn't get a response right now.";
 
-      setResponse(aiText);
+      // Deliver to page via stable callback ref — no useState dependency chain
+      onReplyRef.current(aiText);
       speak(aiText);
     } catch (err: any) {
       const msg =
         err.response?.data?.data?.message ||
         err.response?.data?.message       ||
         err.message                        ||
-        "Failed to contact Copilot.";
+        "Failed to reach Copilot.";
       toast.error(msg);
-      const fallback = "My connection to the financial ledger was interrupted. Please try again.";
-      setResponse(fallback);
+      const fallback = "My connection was interrupted. Please try again.";
+      onReplyRef.current(fallback);
       speak(fallback);
     }
-  }, [setStatusSynced, speak]);
+  };
 
-  // ── Public API ───────────────────────────────────────────────────
+  // Stable wrapper so components can call it without worrying about identity
+  const runQuery = useCallback((text: string) => {
+    runQueryRef.current(text);
+  }, []);
+
+  /* ── stop ────────────────────────────────────── */
+  const stopInteraction = useCallback(() => {
+    recognitionRef.current?.abort();
+    synthesisRef.current?.cancel();
+    setStatusSynced("idle");
+  }, [setStatusSynced]);
+
+  /* ── start listening ─────────────────────────── */
   const startListening = useCallback(() => {
     if (!ensureApis()) {
-      toast.error("Speech recognition is not supported in this browser. Use the text input.");
+      toast.error("Speech recognition not supported. Use the text input.");
       return;
     }
-    if (statusRef.current !== "idle") stopInteractionInner();
-
+    if (statusRef.current !== "idle") stopInteraction();
     try {
       setTranscript("");
       recognitionRef.current!.start();
@@ -156,22 +160,15 @@ export function useSpeechController(): UseSpeechControllerReturn {
       toast.error("Failed to start microphone.");
       setStatusSynced("idle");
     }
-  }, [ensureApis, setStatusSynced]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ensureApis, stopInteraction, setStatusSynced]);
 
-  const stopInteractionInner = useCallback(() => {
-    recognitionRef.current?.abort();
-    synthesisRef.current?.cancel();
-    setStatusSynced("idle");
-  }, [setStatusSynced]);
-
-  const stopInteraction = stopInteractionInner;
-
+  /* ── submit text ─────────────────────────────── */
   const submitTextQuery = useCallback((text: string) => {
-    ensureApis();                     // init synthesis if needed
-    if (statusRef.current !== "idle") stopInteractionInner();
+    ensureApis();
+    if (statusRef.current !== "idle") stopInteraction();
     setTranscript(text);
-    handleQuery(text);
-  }, [ensureApis, stopInteractionInner, handleQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+    runQuery(text);
+  }, [ensureApis, stopInteraction, runQuery]);
 
-  return { status, transcript, response, startListening, stopInteraction, submitTextQuery };
+  return { status, transcript, startListening, stopInteraction, submitTextQuery };
 }
