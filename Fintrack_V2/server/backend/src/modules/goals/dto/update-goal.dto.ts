@@ -11,7 +11,7 @@ export class UpdateGoalDto extends createZodDto(UpdateGoalSchema) {
 
   @ApiPropertyOptional({
     example: 350000,
-    description: 'Updated target amount to reach the goal',
+    description: 'Updated target amount',
   })
   target?: number;
 
@@ -23,13 +23,13 @@ export class UpdateGoalDto extends createZodDto(UpdateGoalSchema) {
 
   @ApiPropertyOptional({
     example: '🏥',
-    description: 'Updated emoji icon representing the goal',
+    description: 'Updated emoji icon',
   })
   icon?: string;
 
   @ApiPropertyOptional({
     example: '#10b981',
-    description: 'Updated hex color code for UI rendering',
+    description: 'Updated hex color code',
   })
   color?: string;
 }

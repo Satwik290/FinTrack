@@ -10,4 +10,8 @@ export const CreateGoalSchema = z.object({
     .regex(/^#([0-9a-f]{3}){1,2}$/i, 'Must be a valid hex color')
     .optional(),
 });
+
 export const UpdateGoalSchema = CreateGoalSchema.partial();
+
+export type CreateGoalInput = z.infer<typeof CreateGoalSchema>;
+export type UpdateGoalInput = z.infer<typeof UpdateGoalSchema>;

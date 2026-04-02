@@ -14,6 +14,7 @@ import { StocksModule } from './modules/stocks/stocks.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { InsuranceModule } from './modules/insurance/insurance.module';
 import { CopilotModule } from './modules/copilot/copilot.module';
+import { GoalsModule } from './modules/goals/goal.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CopilotModule } from './modules/copilot/copilot.module';
     StocksModule,
     InsuranceModule,
     CopilotModule,
+    GoalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

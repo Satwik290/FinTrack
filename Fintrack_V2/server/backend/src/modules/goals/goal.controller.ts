@@ -7,6 +7,8 @@ import {
   Body,
   Param,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,8 +23,8 @@ import { UpdateGoalDto } from './dto/update-goal.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-interface ReqUser {
-  sub: string; // JwtAuthGuard sets sub, not id
+interface JwtPayload {
+  sub: string; // userId
   email: string;
 }
 
@@ -33,46 +35,86 @@ interface ReqUser {
 export class GoalsController {
   constructor(private readonly goalsService: GoalsService) {}
 
+  // ---------------------------------------------------------------------------
+  // POST /goals
+  // ---------------------------------------------------------------------------
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new financial goal' })
   @ApiResponse({ status: 201, description: 'Goal created successfully.' })
   @ApiResponse({ status: 400, description: 'Validation error.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async create(
-    @CurrentUser() user: ReqUser,
+  create(
+    @CurrentUser() user: JwtPayload,
     @Body() createGoalDto: CreateGoalDto,
   ) {
-    // FIX: was req.user.id — JwtAuthGuard puts userId in user.sub
     return this.goalsService.create(user.sub, createGoalDto);
   }
 
+  // ---------------------------------------------------------------------------
+  // GET /goals
+  // ---------------------------------------------------------------------------
   @Get()
   @ApiOperation({ summary: 'Retrieve all goals for the authenticated user' })
   @ApiResponse({ status: 200, description: 'Returns array of goals.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async findAll(@CurrentUser() user: ReqUser) {
+  findAll(@CurrentUser() user: JwtPayload) {
     return this.goalsService.findAll(user.sub);
   }
 
+  // ---------------------------------------------------------------------------
+  // GET /goals/:id
+  // ---------------------------------------------------------------------------
+  @Get(':id')
+  @ApiOperation({ summary: 'Retrieve a single goal by ID' })
+  @ApiParam({ name: 'id', description: 'UUID of the goal' })
+  @ApiResponse({ status: 200, description: 'Returns the goal.' })
+  @ApiResponse({ status: 404, description: 'Goal not found.' })
+  findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.goalsService.findOne(user.sub, id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // PATCH /goals/:id
+  // ---------------------------------------------------------------------------
   @Patch(':id')
   @ApiOperation({ summary: 'Partially update an existing financial goal' })
-  @ApiParam({ name: 'id', description: 'The UUID of the goal to update' })
+  @ApiParam({ name: 'id', description: 'UUID of the goal to update' })
   @ApiResponse({ status: 200, description: 'Goal updated successfully.' })
   @ApiResponse({ status: 404, description: 'Goal not found.' })
-  async update(
-    @CurrentUser() user: ReqUser,
+  update(
+    @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() updateGoalDto: UpdateGoalDto,
   ) {
     return this.goalsService.update(user.sub, id, updateGoalDto);
   }
 
+  // ---------------------------------------------------------------------------
+  // PATCH /goals/:id/progress
+  // ---------------------------------------------------------------------------
+  @Patch(':id/progress')
+  @ApiOperation({ summary: 'Update the current saved amount for a goal' })
+  @ApiParam({ name: 'id', description: 'UUID of the goal' })
+  @ApiResponse({ status: 200, description: 'Progress updated successfully.' })
+  @ApiResponse({ status: 404, description: 'Goal not found.' })
+  updateProgress(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body('amount') amount: number,
+  ) {
+    return this.goalsService.updateProgress(user.sub, id, amount);
+  }
+
+  // ---------------------------------------------------------------------------
+  // DELETE /goals/:id
+  // ---------------------------------------------------------------------------
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a financial goal' })
-  @ApiParam({ name: 'id', description: 'The UUID of the goal to delete' })
+  @ApiParam({ name: 'id', description: 'UUID of the goal to delete' })
   @ApiResponse({ status: 200, description: 'Goal deleted successfully.' })
   @ApiResponse({ status: 404, description: 'Goal not found.' })
-  async remove(@CurrentUser() user: ReqUser, @Param('id') id: string) {
+  remove(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.goalsService.remove(user.sub, id);
   }
 }
