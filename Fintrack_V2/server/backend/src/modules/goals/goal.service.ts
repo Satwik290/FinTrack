@@ -11,67 +11,61 @@ export class GoalsService {
     const colors = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    const newGoal = await this.prisma.goal.create({
+    // FIX: schema fields are name/targetAmount/targetDate NOT title/target/deadline
+    return this.prisma.goal.create({
       data: {
-        ...data,
         userId,
-        target: Number(data.target),
-        deadline: new Date(data.deadline),
-        color: data.color || randomColor,
-        icon: data.icon || '🎯',
+        name: data.title, // title → name
+        targetAmount: Number(data.target), // target → targetAmount
+        targetDate: data.deadline // deadline → targetDate
+          ? new Date(data.deadline)
+          : null,
+        color: data.color ?? randomColor,
+        icon: data.icon ?? '🎯',
+        // currentAmount defaults to 0 per schema
       },
     });
-
-    return newGoal;
   }
 
   async findAll(userId: string) {
-    const goals = await this.prisma.goal.findMany({
+    // FIX: orderBy targetDate not deadline
+    return this.prisma.goal.findMany({
       where: { userId },
-      orderBy: { deadline: 'asc' },
+      orderBy: { targetDate: 'asc' },
     });
-
-    return goals;
   }
 
   async update(userId: string, id: string, updateGoalDto: UpdateGoalDto) {
-    const existingGoal = await this.prisma.goal.findUnique({
-      where: { id },
-    });
-
-    if (!existingGoal || existingGoal.userId !== userId) {
+    const existing = await this.prisma.goal.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
       throw new NotFoundException('Goal not found');
     }
 
-    const dataToUpdate: Record<string, string | number | Date> = {
-      ...updateGoalDto,
-    };
+    // FIX: map DTO fields (title/target/deadline) to schema fields (name/targetAmount/targetDate)
+    const dataToUpdate: Record<string, string | number | Date | null> = {};
 
-    if (updateGoalDto.deadline) {
-      dataToUpdate.deadline = new Date(updateGoalDto.deadline);
-    }
+    if (updateGoalDto.title !== undefined)
+      dataToUpdate.name = updateGoalDto.title;
+    if (updateGoalDto.target !== undefined)
+      dataToUpdate.targetAmount = Number(updateGoalDto.target);
+    if (updateGoalDto.deadline !== undefined)
+      dataToUpdate.targetDate = updateGoalDto.deadline
+        ? new Date(updateGoalDto.deadline)
+        : null;
+    if (updateGoalDto.icon !== undefined)
+      dataToUpdate.icon = updateGoalDto.icon;
+    if (updateGoalDto.color !== undefined)
+      dataToUpdate.color = updateGoalDto.color;
 
-    const updatedGoal = await this.prisma.goal.update({
-      where: { id },
-      data: dataToUpdate,
-    });
-
-    return updatedGoal;
+    return this.prisma.goal.update({ where: { id }, data: dataToUpdate });
   }
 
   async remove(userId: string, id: string) {
-    const existingGoal = await this.prisma.goal.findUnique({
-      where: { id },
-    });
-
-    if (!existingGoal || existingGoal.userId !== userId) {
+    const existing = await this.prisma.goal.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
       throw new NotFoundException('Goal not found');
     }
-
-    await this.prisma.goal.delete({
-      where: { id },
-    });
-
+    await this.prisma.goal.delete({ where: { id } });
     return { message: 'Goal successfully deleted' };
   }
 }
