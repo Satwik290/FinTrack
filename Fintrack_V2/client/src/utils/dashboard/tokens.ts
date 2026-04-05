@@ -5,28 +5,30 @@ export function hexToRgb(hex: string): string {
   return `${r},${g},${b}`;
 }
 
-export const C = {
-  bg:      '#080B14',
-  surface: '#0D1117',
-  raised:  '#131920',
-  border:  'rgba(255,255,255,0.055)',
-  borderHi:'rgba(108,116,255,0.35)',
-  jade:    '#0DDC9B',
-  terra:   '#FF5C67',
-  indigo:  '#6C74FF',
-  violet:  '#7E5BFB',
-  amber:   '#F59E0B',
-  text0:   '#F0F4FA',
-  text1:   '#8897A7',
-  text2:   '#3D4F61',
-  glow:    (col: string, a = 0.22) => `rgba(${hexToRgb(col)},${a})`,
+/* ── CSS variable names ── */
+export const V = {
+  bg:       'var(--ft-bg)',
+  surface:  'var(--ft-surface)',
+  raised:   'var(--ft-raised)',
+  border:   'var(--ft-border)',
+  borderHi: 'var(--ft-border-hi)',
+  text0:    'var(--ft-text0)',
+  text1:    'var(--ft-text1)',
+  text2:    'var(--ft-text2)',
+  jade:     '#0DDC9B',
+  terra:    '#FF5C67',
+  indigo:   '#6C74FF',
+  violet:   '#7E5BFB',
+  amber:    '#F59E0B',
+  glow:     (col: string, a = 0.22) => `rgba(${hexToRgb(col)},${a})`,
 } as const;
+
+export const C = V;
 
 export const MONO = "'Space Mono','JetBrains Mono',monospace";
 export const SYNE = "'Syne','Plus Jakarta Sans',sans-serif";
 export const SANS = "'DM Sans','Outfit',sans-serif";
 
-/* ── Formatters ── */
 export const fmtINR = (n: number, m = false) =>
   m ? '₹ ••••' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
@@ -57,3 +59,36 @@ export const CATEGORY_EMOJI: Record<string, string> = {
   Healthcare: '💊', Utilities: '⚡', Salary: '💼', Investment: '📈',
   Other: '📦', Insurance: '🛡️',
 };
+
+export const THEME_CSS = `
+  :root, [data-theme="dark"] {
+    --ft-bg:         #080B14;
+    --ft-surface:    #0D1117;
+    --ft-raised:     #131920;
+    --ft-border:     rgba(255,255,255,0.055);
+    --ft-border-hi:  rgba(108,116,255,0.35);
+    --ft-text0:      #F0F4FA;
+    --ft-text1:      #8897A7;
+    --ft-text2:      #3D4F61;
+    --ft-shadow:     rgba(0,0,0,0.5);
+    --ft-chart-grid: rgba(255,255,255,0.04);
+    --ft-hover-bg:   rgba(255,255,255,0.02);
+    --ft-tag-bg:     rgba(255,255,255,0.05);
+    --ft-grain-op:   0.4;
+  }
+  [data-theme="light"] {
+    --ft-bg:         #EEF2F7;
+    --ft-surface:    #FFFFFF;
+    --ft-raised:     #F6F8FB;
+    --ft-border:     rgba(0,0,0,0.08);
+    --ft-border-hi:  rgba(108,116,255,0.5);
+    --ft-text0:      #0D1117;
+    --ft-text1:      #4A5568;
+    --ft-text2:      #94A3B8;
+    --ft-shadow:     rgba(0,0,0,0.07);
+    --ft-chart-grid: rgba(0,0,0,0.05);
+    --ft-hover-bg:   rgba(0,0,0,0.02);
+    --ft-tag-bg:     rgba(0,0,0,0.04);
+    --ft-grain-op:   0;
+  }
+`;

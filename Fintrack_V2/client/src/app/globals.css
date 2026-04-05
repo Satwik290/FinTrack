@@ -400,3 +400,41 @@ body {
   background: rgba(0,0,0,0.04);
 }
  
+@keyframes border-beam {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.beam-wrapper {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  /* The default dark border color */
+  background: rgba(255, 255, 255, 0.05); 
+}
+
+.beam-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  /* The "Beam": mostly transparent, with a sharp sliver of glowing light */
+  background: conic-gradient(
+    transparent 0deg,
+    transparent 280deg,
+    rgba(168, 192, 255, 0.2) 320deg, /* Tail */
+    #818CF8 360deg /* Head of the beam */
+  );
+  animation: border-beam 4s linear infinite;
+  transform-origin: 0 0;
+}
+
+.beam-content {
+  position: absolute;
+  inset: 1px; /* This creates the 1px border thickness */
+  border-radius: 23px; /* Slightly less than wrapper to fit inside */
+  background: linear-gradient(160deg, #0A0D14 0%, #05070A 100%);
+  z-index: 1;
+}
