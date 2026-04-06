@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ArrowLeftRight, PiggyBank,
   Sparkles, Target, Settings, TrendingUp,
   ChevronLeft, ChevronRight, LogOut, X, Menu,
-  Landmark, BookOpen, BarChart2, Bot
+  Landmark, BookOpen, BarChart2, Bot, Moon, Sun,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,29 +18,41 @@ const NAV = [
   { href: "/budget",       icon: PiggyBank,       label: "Budget"        },
   { href: "/insights",     icon: Sparkles,        label: "Insights"      },
   { href: "/goals",        icon: Target,          label: "Goals"         },
-  // { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
-  // { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
+  { href: "/mutual-funds", icon: BookOpen,        label: "Mutual Funds"  },
+  { href: "/stocks",       icon: BarChart2,       label: "Stocks"        },
   { href: "/wealth",       icon: Landmark,        label: "Wealth"        },
   { href: "/copilot",      icon: Bot,             label: "Copilot"       },
 ];
 
 const BOTTOM_NAV_ITEMS = [
-  { href: "/dashboard",    icon: LayoutDashboard, label: "Dashboard"     },
-  { href: "/transactions", icon: ArrowLeftRight,  label: "Transactions"  },
-  { href: "/budget",       icon: PiggyBank,       label: "Budget"        },
-  { href: "/insights",     icon: Sparkles,        label: "Insights"      },
-  { href: "/goals",        icon: Target,          label: "Goals"         },
-  // { href: "/mutual-funds", icon: BookOpen,        label: "Funds"  },
-  // { href: "/stocks",       icon: BarChart2,       label: "Stocks" },
-  { href: "/wealth",       icon: Landmark,        label: "Wealth" },
-  { href: "/copilot",      icon: Bot,             label: "Copilot" },
+  { href: "/dashboard",    icon: LayoutDashboard, label: "Home"     },
+  { href: "/transactions", icon: ArrowLeftRight,  label: "Txns"     },
+  { href: "/budget",       icon: PiggyBank,       label: "Budget"   },
+  { href: "/wealth",       icon: Landmark,        label: "Wealth"   },
+  { href: "/copilot",      icon: Bot,             label: "Copilot"  },
 ];
 
-/* ─── Desktop Sidebar ────────────────────────────── */
+/* ── Logo mark ───────────────────────────────────── */
+function LogoMark({ size = 36 }: { size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: Math.round(size * 0.28), flexShrink: 0,
+      background: "linear-gradient(135deg,#6366f1,#7c3aed)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+    }}>
+      <TrendingUp size={Math.round(size * 0.52)} color="#fff" strokeWidth={2.5} />
+    </div>
+  );
+}
+
+/* ── Desktop Sidebar ─────────────────────────────── */
 function DesktopSidebar() {
-  const pathname = usePathname();
+  const pathname  = usePathname();
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const toggle    = useAppStore((s) => s.toggleSidebar);
+  const isDark    = useAppStore((s) => s.isDarkMode);
+  const toggleDark = useAppStore((s) => s.toggleDarkMode);
   const { logout } = useAuth();
   const W = collapsed ? 68 : 240;
 
@@ -50,30 +62,27 @@ function DesktopSidebar() {
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       style={{
         width: W, minHeight: "100vh", flexShrink: 0,
-        background: "var(--bg-surface)", borderRight: "1px solid var(--border)",
+        background: "var(--bg-surface)",
+        borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
-        position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 30, overflow: "hidden",
+        position: "fixed", left: 0, top: 0, bottom: 0,
+        zIndex: 30, overflow: "hidden",
+        transition: "background 0.35s ease, border-color 0.35s ease",
       }}
     >
       {/* Logo */}
       <div style={{
         height: 64, display: "flex", alignItems: "center",
-        padding: collapsed ? "0 14px" : "0 20px",
+        padding: collapsed ? "0 14px" : "0 18px",
         borderBottom: "1px solid var(--border)", gap: 10, flexShrink: 0,
       }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-          background: "linear-gradient(135deg,#6366f1,#7c3aed)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <TrendingUp size={19} color="#fff" />
-        </div>
+        <LogoMark size={34} />
         <AnimatePresence>
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: "auto" }}
               exit={{ opacity: 0, width: 0 }} transition={{ duration: 0.2 }}
-              style={{ fontWeight: 800, fontSize: 18, whiteSpace: "nowrap", letterSpacing: "-0.5px", overflow: "hidden" }}
+              style={{ fontWeight: 800, fontSize: 17, whiteSpace: "nowrap", letterSpacing: "-0.5px", overflow: "hidden", color: "var(--text-primary)" }}
             >
               FinTrack
             </motion.span>
@@ -81,13 +90,13 @@ function DesktopSidebar() {
         </AnimatePresence>
       </div>
 
-      {/* Nav — scrollable so all items fit on small screens */}
-      <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: "12px 8px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", overflowX: "hidden" }}>
         {NAV.map(({ href, icon: Icon, label }) => {
           const active = pathname.startsWith(href);
           return (
             <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`} title={collapsed ? label : undefined}>
-              <Icon className="nav-icon" />
+              <Icon size={18} style={{ flexShrink: 0, width: 18, height: 18 }} />
               <AnimatePresence>
                 {!collapsed && (
                   <motion.span
@@ -105,29 +114,54 @@ function DesktopSidebar() {
       </nav>
 
       {/* Bottom */}
-      <div style={{ padding: "12px 10px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ padding: "10px 8px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 2 }}>
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleDark}
+          className="nav-item"
+          title={collapsed ? (isDark ? "Light mode" : "Dark mode") : undefined}
+          style={{ border: "none" }}
+        >
+          {isDark
+            ? <Sun size={18} style={{ flexShrink: 0, color: "var(--warning)" }} />
+            : <Moon size={18} style={{ flexShrink: 0 }} />
+          }
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: "auto" }} exit={{ opacity: 0, width: 0 }}
+                style={{ whiteSpace: "nowrap", overflow: "hidden" }}>
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+
         <Link href="/settings" className={`nav-item ${pathname.startsWith("/settings") ? "active" : ""}`} title={collapsed ? "Settings" : undefined}>
-          <Settings className="nav-icon" />
+          <Settings size={18} style={{ flexShrink: 0 }} />
           {!collapsed && <span style={{ whiteSpace: "nowrap" }}>Settings</span>}
         </Link>
+
         <button onClick={logout} className="nav-item" title={collapsed ? "Logout" : undefined}
           style={{ border: "none", background: "none", width: "100%", cursor: "pointer" }}>
-          <LogOut className="nav-icon" style={{ flexShrink: 0 }} />
+          <LogOut size={18} style={{ flexShrink: 0, color: "var(--danger)" }} />
           {!collapsed && <span style={{ whiteSpace: "nowrap" }}>Logout</span>}
         </button>
-        <button onClick={toggle} className="btn btn-icon"
-          style={{ width: "100%", marginTop: 8, justifyContent: "center" }}
+
+        <button onClick={toggle} className="btn btn-ghost btn-sm"
+          style={{ width: "100%", marginTop: 6, justifyContent: "center", borderRadius: "var(--radius-md)" }}
           title={collapsed ? "Expand" : "Collapse"}>
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
         </button>
       </div>
     </motion.aside>
   );
 }
 
-/* ─── Mobile Drawer ──────────────────────────────── */
+/* ── Mobile Drawer ───────────────────────────────── */
 function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const isDark   = useAppStore((s) => s.isDarkMode);
+  const toggleDark = useAppStore((s) => s.toggleDarkMode);
   const { logout } = useAuth();
 
   return (
@@ -137,7 +171,7 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 45, backdropFilter: "blur(2px)" }}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 45, backdropFilter: "blur(3px)" }}
           />
           <motion.div
             initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
@@ -149,36 +183,37 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               borderRight: "1px solid var(--border)",
             }}
           >
-            <div style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px", borderBottom: "1px solid var(--border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <TrendingUp size={19} color="#fff" />
-                </div>
-                <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.5px" }}>FinTrack</span>
+                <LogoMark size={34} />
+                <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.5px", color: "var(--text-primary)" }}>FinTrack</span>
               </div>
               <button onClick={onClose} className="btn btn-icon" style={{ width: 32, height: 32 }}><X size={16} /></button>
             </div>
 
-            <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
+            <nav style={{ flex: 1, padding: "14px 10px", display: "flex", flexDirection: "column", gap: 3, overflowY: "auto" }}>
               {NAV.map(({ href, icon: Icon, label }) => (
                 <Link key={href} href={href}
                   className={`nav-item ${pathname.startsWith(href) ? "active" : ""}`}
-                  onClick={onClose}
-                  style={{ fontSize: 15, padding: "12px 16px" }}>
-                  <Icon size={20} style={{ flexShrink: 0 }} />
+                  onClick={onClose} style={{ fontSize: 14, padding: "11px 14px" }}>
+                  <Icon size={19} style={{ flexShrink: 0 }} />
                   <span>{label}</span>
                 </Link>
               ))}
             </nav>
 
-            <div style={{ padding: "12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ padding: "12px 10px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 3 }}>
+              <button onClick={() => { toggleDark(); }} className="nav-item" style={{ border: "none", fontSize: 14, padding: "11px 14px" }}>
+                {isDark ? <Sun size={19} style={{ flexShrink: 0, color: "var(--warning)" }} /> : <Moon size={19} style={{ flexShrink: 0 }} />}
+                <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+              </button>
               <Link href="/settings" className={`nav-item ${pathname.startsWith("/settings") ? "active" : ""}`}
-                onClick={onClose} style={{ fontSize: 15, padding: "12px 16px" }}>
-                <Settings size={20} style={{ flexShrink: 0 }} /><span>Settings</span>
+                onClick={onClose} style={{ fontSize: 14, padding: "11px 14px" }}>
+                <Settings size={19} style={{ flexShrink: 0 }} /><span>Settings</span>
               </Link>
               <button onClick={() => { logout(); onClose(); }} className="nav-item"
-                style={{ border: "none", background: "none", width: "100%", cursor: "pointer", fontSize: 15, padding: "12px 16px" }}>
-                <LogOut size={20} style={{ flexShrink: 0 }} /><span>Logout</span>
+                style={{ border: "none", background: "none", width: "100%", cursor: "pointer", fontSize: 14, padding: "11px 14px" }}>
+                <LogOut size={19} style={{ flexShrink: 0, color: "var(--danger)" }} /><span>Logout</span>
               </button>
             </div>
           </motion.div>
@@ -188,31 +223,28 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
   );
 }
 
-/* ─── Mobile TopBar ──────────────────────────────── */
+/* ── Mobile TopBar ───────────────────────────────── */
 function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
-  const isDark    = useAppStore((s) => s.isDarkMode);
-  const toggleDark = useAppStore((s) => s.toggleDarkMode);
-  const user      = useAppStore((s) => s.user);
-  const initials  = user?.email?.slice(0, 2).toUpperCase() ?? "FT";
+  const user     = useAppStore((s) => s.user);
+  const initials = user?.email?.slice(0, 2).toUpperCase() ?? "FT";
 
   return (
     <header style={{
-      height: "var(--mobile-topbar-height)", background: "var(--bg-surface)",
-      borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center",
-      padding: "0 16px", gap: 12, position: "sticky", top: 0, zIndex: 20,
+      height: "var(--mobile-topbar-height)",
+      background: "var(--bg-surface)",
+      borderBottom: "1px solid var(--border)",
+      display: "flex", alignItems: "center",
+      padding: "0 16px", gap: 12,
+      position: "sticky", top: 0, zIndex: 20,
+      transition: "background 0.35s ease, border-color 0.35s ease",
     }}>
       <button onClick={onMenuOpen} className="btn btn-icon" style={{ width: 36, height: 36, flexShrink: 0 }}>
         <Menu size={18} />
       </button>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6366f1,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <TrendingUp size={15} color="#fff" />
-        </div>
-        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.5px" }}>FinTrack</span>
+        <LogoMark size={28} />
+        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.5px", color: "var(--text-primary)" }}>FinTrack</span>
       </div>
-      <button onClick={toggleDark} className="btn btn-icon" style={{ width: 36, height: 36 }}>
-        {isDark ? "☀️" : "🌙"}
-      </button>
       <div style={{
         width: 32, height: 32, borderRadius: "50%",
         background: "linear-gradient(135deg,#6366f1,#7c3aed)",
@@ -225,62 +257,92 @@ function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   );
 }
 
-/* ─── Desktop TopBar ─────────────────────────────── */
+/* ── Desktop TopBar ──────────────────────────────── */
 function DesktopTopBar() {
   const user       = useAppStore((s) => s.user);
   const isDark     = useAppStore((s) => s.isDarkMode);
   const toggleDark = useAppStore((s) => s.toggleDarkMode);
   const initials   = user?.email?.slice(0, 2).toUpperCase() ?? "FT";
+  const email      = user?.email ?? "";
 
   return (
     <header style={{
       height: 64, flexShrink: 0,
-      background: "var(--bg-surface)", borderBottom: "1px solid var(--border)",
+      background: "var(--bg-surface)",
+      borderBottom: "1px solid var(--border)",
       display: "flex", alignItems: "center", padding: "0 24px", gap: 16,
       position: "sticky", top: 0, zIndex: 20,
+      transition: "background 0.35s ease, border-color 0.35s ease",
     }}>
       <div style={{ flex: 1, maxWidth: 400, position: "relative" }}>
-        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 14 }}>🔍</span>
+        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </span>
         <input type="text" placeholder="Search transactions, budgets…" className="input"
-          style={{ paddingLeft: 36, height: 38, fontSize: 13 }} />
+          style={{ paddingLeft: 36, height: 38, fontSize: 13, borderRadius: "var(--radius-full)" }} />
       </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-        <button onClick={toggleDark} className="btn btn-icon">{isDark ? "☀️" : "🌙"}</button>
+        {/* Theme toggle */}
+        <motion.button
+          onClick={toggleDark}
+          className="btn btn-icon"
+          whileTap={{ scale: 0.9, rotate: 15 }}
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={isDark ? "moon" : "sun"}
+              initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+              {isDark ? <Sun size={16} style={{ color: "var(--warning)" }} /> : <Moon size={16} />}
+            </motion.div>
+          </AnimatePresence>
+        </motion.button>
+
+        {/* Notification bell */}
         <button className="btn btn-icon" style={{ position: "relative" }}>
-          🔔
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span style={{ position: "absolute", top: 8, right: 8, width: 7, height: 7, borderRadius: "50%", background: "var(--danger)", border: "2px solid var(--bg-surface)" }} />
         </button>
-        <div style={{
-          width: 36, height: 36, borderRadius: "50%",
-          background: "linear-gradient(135deg,#6366f1,#7c3aed)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0,
-        }}>
-          {initials}
+
+        {/* Avatar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px 4px 4px", borderRadius: "var(--radius-full)", background: "var(--bg-surface-2)", border: "1px solid var(--border)", cursor: "pointer" }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: "50%",
+            background: "linear-gradient(135deg,#6366f1,#7c3aed)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontWeight: 700, fontSize: 11,
+          }}>
+            {initials}
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {email.split("@")[0]}
+          </span>
         </div>
       </div>
     </header>
   );
 }
 
-/* ─── Bottom Navigation (mobile) ─────────────────── */
+/* ── Bottom Nav (mobile) ─────────────────────────── */
 function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="bottom-nav">
       {BOTTOM_NAV_ITEMS.map(({ href, icon: Icon, label }) => (
         <Link key={href} href={href} className={`bottom-nav-item ${pathname.startsWith(href) ? "active" : ""}`}>
-          <Icon size={22} /><span>{label}</span>
+          <Icon size={20} />
+          <span>{label}</span>
         </Link>
       ))}
     </nav>
   );
 }
 
-/* ─── Main Layout ────────────────────────────────── */
+/* ── Main Layout ─────────────────────────────────── */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router     = useRouter();
-  const collapsed  = useAppStore((s) => s.sidebarCollapsed);
+  const router    = useRouter();
+  const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isMobile,   setIsMobile]   = useState(false);
   const [isMounted,  setIsMounted]  = useState(false);

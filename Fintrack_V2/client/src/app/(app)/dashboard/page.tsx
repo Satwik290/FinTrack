@@ -9,10 +9,8 @@ import { MacroBento }         from '../../../components/dashboard/components/Mac
 import { KpiRow }             from '../../../components/dashboard/components/KpiRow';
 import { IncomeChart }        from '../../../components/dashboard/components/IncomeChart';
 import { PortfolioHeatmap }   from '../../../components/dashboard/components/PortfolioHeatmap';
-import { CategoryPieChart } from '@/components/dashboard/CategoryPieChart';
 import { RecentTransactions } from '../../../components/dashboard/components/RecentTransactions';
-import { InsightsPanel } from '@/components/dashboard/components/InsightsPanel';
-
+import { InsightsPanel }      from '@/components/dashboard/components/InsightsPanel';
 
 export default function DashboardPage() {
   const { isLoading: wealthLoading }         = useWealth();
@@ -24,6 +22,7 @@ export default function DashboardPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
 
+        /* ── Dark (default) ── */
         :root, [data-theme="dark"] {
           --ft-bg:         #080B14;
           --ft-surface:    #0D1117;
@@ -35,25 +34,30 @@ export default function DashboardPage() {
           --ft-text2:      #3D4F61;
           --ft-shadow:     rgba(0,0,0,0.5);
           --ft-chart-grid: rgba(255,255,255,0.04);
-          --ft-hover-bg:   rgba(255,255,255,0.02);
+          --ft-hover-bg:   rgba(255,255,255,0.025);
           --ft-tag-bg:     rgba(255,255,255,0.05);
           --ft-grain-op:   0.4;
+          --ft-input-bg:   rgba(255,255,255,0.04);
+          --ft-shard-bg:   #131920;
         }
 
+        /* ── Light ── */
         [data-theme="light"] {
           --ft-bg:         #EEF2F7;
           --ft-surface:    #FFFFFF;
           --ft-raised:     #F6F8FB;
-          --ft-border:     rgba(0,0,0,0.08);
-          --ft-border-hi:  rgba(108,116,255,0.5);
+          --ft-border:     rgba(0,0,0,0.07);
+          --ft-border-hi:  rgba(99,102,241,0.45);
           --ft-text0:      #0D1117;
           --ft-text1:      #4A5568;
           --ft-text2:      #94A3B8;
-          --ft-shadow:     rgba(0,0,0,0.07);
-          --ft-chart-grid: rgba(0,0,0,0.05);
-          --ft-hover-bg:   rgba(0,0,0,0.02);
+          --ft-shadow:     rgba(0,0,0,0.06);
+          --ft-chart-grid: rgba(0,0,0,0.04);
+          --ft-hover-bg:   rgba(0,0,0,0.025);
           --ft-tag-bg:     rgba(0,0,0,0.04);
           --ft-grain-op:   0;
+          --ft-input-bg:   rgba(0,0,0,0.03);
+          --ft-shard-bg:   #FFFFFF;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -61,13 +65,44 @@ export default function DashboardPage() {
         body {
           background: var(--ft-bg);
           color: var(--ft-text0);
-          transition: background 0.3s ease, color 0.3s ease;
+          transition: background 0.35s ease, color 0.35s ease;
         }
 
-        @keyframes spin         { from { transform: rotate(0deg) }   to { transform: rotate(360deg) } }
-        @keyframes shimmer      { 0%   { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+        /* ── Shard overrides for light mode ── */
+        [data-theme="light"] .ft-shard {
+          background: #FFFFFF !important;
+          border-color: rgba(0,0,0,0.07) !important;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.05) !important;
+        }
+        [data-theme="light"] .ft-shard:hover {
+          border-color: rgba(99,102,241,0.35) !important;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(99,102,241,0.2) !important;
+        }
+
+        /* ── Recharts in light mode ── */
+        [data-theme="light"] .recharts-cartesian-grid line { stroke: rgba(0,0,0,0.06); }
+        [data-theme="light"] .recharts-tooltip-wrapper .recharts-default-tooltip {
+          background: #fff !important;
+          border: 1px solid rgba(0,0,0,0.1) !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+          border-radius: 12px !important;
+        }
+
+        /* ── Input / form elements ── */
+        [data-theme="light"] input::placeholder { color: rgba(0,0,0,0.35); }
+        [data-theme="dark"]  input::placeholder { color: var(--ft-text2); }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar       { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--ft-border); border-radius: 99px; }
+
+        /* ── Animations ── */
+        @keyframes spin    { from { transform: rotate(0deg) }   to { transform: rotate(360deg) } }
+        @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
         @keyframes border-pulse { 0%, 100% { opacity: 0.55 } 50% { opacity: 1 } }
 
+        /* ── Grid layouts ── */
         .bento-macro {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -102,6 +137,7 @@ export default function DashboardPage() {
           align-items: start;
         }
 
+        /* ── Responsive ── */
         @media (max-width: 1100px) {
           .bento-macro     { grid-template-columns: 1fr 1fr; }
           .engine-kpi-row  { grid-template-columns: repeat(3, 1fr); }
@@ -113,13 +149,32 @@ export default function DashboardPage() {
           .tactical-bottom { grid-template-columns: 1fr; }
         }
 
-        ::-webkit-scrollbar       { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--ft-border); border-radius: 99px; }
+        /* ── KPI card text in light mode ── */
+        [data-theme="light"] .kpi-label   { color: #4A5568 !important; }
+        [data-theme="light"] .kpi-sublabel { color: #94A3B8 !important; }
 
-        input::placeholder { color: var(--ft-text2); }
+        /* ── MacroBento Net Worth card always dark ── */
+        .nw-card {
+          background: linear-gradient(160deg, #0A0D14 0%, #05070A 100%) !important;
+        }
+        [data-theme="light"] .nw-card-text-muted { color: rgba(255,255,255,0.45) !important; }
+
+        /* ── Chart tooltip light mode text ── */
+        [data-theme="light"] .chart-tip-label  { color: #0D1117 !important; }
+        [data-theme="light"] .chart-tip-value  { color: #0D1117 !important; }
+        [data-theme="light"] .chart-tip-name   { color: #4A5568 !important; }
+
+        /* ── Recent transactions hover ── */
+        [data-theme="light"] .tx-row:hover { background: rgba(0,0,0,0.025) !important; }
+
+        /* ── Heatmap cells light mode ── */
+        [data-theme="light"] .heatmap-cell { border-color: rgba(0,0,0,0.08) !important; }
+
+        /* ── Portfolio heatmap empty state ── */
+        [data-theme="light"] .heatmap-empty-text { color: #4A5568 !important; }
       `}</style>
 
+      {/* Film grain overlay — hidden in light mode via --ft-grain-op */}
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
         opacity: 'var(--ft-grain-op)' as unknown as number,
@@ -131,7 +186,7 @@ export default function DashboardPage() {
         position: 'relative', zIndex: 1,
         minHeight: '100vh',
         background: 'var(--ft-bg)',
-        transition: 'background 0.3s ease',
+        transition: 'background 0.35s ease',
         padding: '0 4px',
       }}>
         <CommandHero />
