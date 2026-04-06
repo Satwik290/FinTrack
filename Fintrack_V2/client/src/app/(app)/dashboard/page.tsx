@@ -1,9 +1,11 @@
 'use client';
+import { useState }         from 'react';
 import { useWealth }        from '@/hooks/usewealth';
 import { useTransactions }  from '@/hooks/useTransactions';
 import { useBudgets }       from '@/hooks/useBudgets';
 import { Transaction, Budget } from '../../../utils/dashboard/types';
 import { ThemeProvider, useTheme } from '@/hooks/usetheme';
+import { DashboardLoader }    from '../../../components/dashboard/components/Dashboardloader';
 import { CommandHero }        from '../../../components/dashboard/components/CommandHero';
 import { MacroBento }         from '../../../components/dashboard/components/MacroBento';
 import { KpiRow }             from '../../../components/dashboard/components/KpiRow';
@@ -13,9 +15,20 @@ import { RecentTransactions } from '../../../components/dashboard/components/Rec
 import { InsightsPanel }      from '@/components/dashboard/components/InsightsPanel';
 
 export default function DashboardPage() {
+  const [loaded, setLoaded] = useState(false);
+
   const { isLoading: wealthLoading }         = useWealth();
   const { data: txns = [], isLoading: txnL } = useTransactions() as { data: Transaction[]; isLoading: boolean };
   const { data: budgets = [] }               = useBudgets() as { data: Budget[] };
+
+  // Show the skeleton loader until data is ready (or at least 1.8s)
+  if (!loaded) {
+    return (
+      <ThemeProvider>
+        <DashboardLoader onDone={() => setLoaded(true)} />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider>
