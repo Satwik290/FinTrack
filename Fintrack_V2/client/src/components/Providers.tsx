@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useAppStore } from '@/store/useAppStore';
@@ -11,10 +11,16 @@ const queryClient = new QueryClient({
 });
 
 function ThemeSyncer() {
+  const [mounted, setMounted] = useState(false);
   const isDarkMode = useAppStore((s) => s.isDarkMode);
+
   useEffect(() => {
+    setMounted(true);
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
+
+  // Don't render until client-side
+  if (!mounted) return null;
   return null;
 }
 
