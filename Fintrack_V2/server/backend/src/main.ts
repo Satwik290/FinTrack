@@ -24,15 +24,12 @@ async function bootstrap() {
 
   console.log('CORS Allowed Origins:', allowedOrigins); // Add this for debugging
 
-  await app.register(
-    require('@fastify/cors'),
-    {
-      origin: allowedOrigins,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: true,
-    },
-  );
+  await app.register(require('@fastify/cors'), {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());
