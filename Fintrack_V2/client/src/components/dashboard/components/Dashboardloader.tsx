@@ -31,11 +31,18 @@ function Bone({
 }
 
 /* Glass card wrapper */
+/* Glass card wrapper */
+interface GhostProps {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  delay?: number;
+}
+
 function Ghost({
   children,
-  style = {} as React.CSSProperties,
+  style = {},
   delay = 0,
-}) {
+}: GhostProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
