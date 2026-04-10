@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -98,7 +98,8 @@ const socialBtnStyle: React.CSSProperties = {
 };
 
 /* ── Animation Variants ──────────────────────────────────── */
-const staggerContainer = {
+/* ── Animation Variants ──────────────────────────────────── */
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -106,9 +107,13 @@ const staggerContainer = {
   }
 };
 
-const fadeUpVariant = {
+const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { type: 'spring', stiffness: 300, damping: 24 } 
+  }
 };
 
 /* ── Main ────────────────────────────────────────────────── */
