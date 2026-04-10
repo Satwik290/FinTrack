@@ -348,6 +348,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMounted,  setIsMounted]  = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
     const token = localStorage.getItem("fintrack_token");
     if (!token) { router.push("/auth"); return; }
