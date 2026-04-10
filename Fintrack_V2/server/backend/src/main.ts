@@ -18,12 +18,13 @@ async function bootstrap() {
   // Dynamic origin handling for CORS
   const allowedOrigins = [
     'http://localhost:3000',
-    process.env.FRONTEND_URL, // This should be your deployed frontend URL
+    'https://fintrack-pink-five.vercel.app',
+    process.env.FRONTEND_URL,
   ].filter(Boolean) as string[];
 
-  // Must register CORS before any routes
+  console.log('CORS Allowed Origins:', allowedOrigins); // Add this for debugging
+
   await app.register(
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('@fastify/cors'),
     {
       origin: allowedOrigins,
