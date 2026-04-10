@@ -14,13 +14,26 @@ const SANS = "'DM Sans','Outfit',sans-serif";
 const MONO = "'Space Mono','JetBrains Mono',monospace";
 
 /* Shimmer pulse block */
+/* ── Bone Component Interface ── */
+interface BoneProps {
+  w?: string | number;
+  h?: string | number;
+  r?: string | number;
+  style?: React.CSSProperties;
+}
+
+/* Shimmer pulse block */
 function Bone({
-  w = '100%', h = 14, r = 7,
-  style = {} as React.CSSProperties,
-}) {
+  w = '100%', 
+  h = 14, 
+  r = 7,
+  style = {}
+}: BoneProps) {
   return (
     <div style={{
-      width: w, height: h, borderRadius: r,
+      width: w, 
+      height: h, 
+      borderRadius: r,
       background: 'linear-gradient(90deg, var(--ft-border) 25%, var(--ft-hover-bg) 50%, var(--ft-border) 75%)',
       backgroundSize: '400% 100%',
       animation: 'ft-shimmer 1.6s ease-in-out infinite',
