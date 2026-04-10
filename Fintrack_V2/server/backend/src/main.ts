@@ -15,12 +15,18 @@ async function bootstrap() {
     new FastifyAdapter({ logger: true }),
   );
 
+  // Dynamic origin handling for CORS
+  const allowedOrigins = [
+    'http://localhost:3000',
+    process.env.FRONTEND_URL, // This should be your deployed frontend URL
+  ].filter(Boolean) as string[];
+
   // Must register CORS before any routes
   await app.register(
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('@fastify/cors'),
     {
-      origin: ['http://localhost:3000'],
+      origin: allowedOrigins,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true,
@@ -42,8 +48,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(3001, '0.0.0.0');
-  console.log(`FinTrack API running on http://localhost:3001/api`);
+  // Use the PORT environment variable provided by the host
+  const port = process.env.PORT || 3001;
+
+  // Listening on '0.0.0.0' is required for many cloud environments
+  await app.listen(port, '0.0.0.0');
+
+  const url = await app.getUrl();
+  console.log(`Application is running on: ${url}/api`);
 }
 
 bootstrap().catch((err) => console.error(err));
