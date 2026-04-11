@@ -17,8 +17,8 @@ const signupSchema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Minimum 8 characters'),
 });
-type LoginForm   = z.infer<typeof loginSchema>;
-type SignupForm  = z.infer<typeof signupSchema>;
+type LoginForm  = z.infer<typeof loginSchema>;
+type SignupForm = z.infer<typeof signupSchema>;
 
 /* ── Password strength ───────────────────────────────────── */
 function pwStrength(pw: string) {
@@ -57,15 +57,17 @@ function LinkedInIcon() {
 /* ── Shared styles ───────────────────────────────────────── */
 const inputStyle = (hasError = false): React.CSSProperties => ({
   width: '100%',
-  padding: '14px 18px', // Increased padding for better feel
-  borderRadius: 12,     // Slightly rounder
+  padding: '14px 18px',
+  borderRadius: 12,
   border: 'none',
-  background: hasError ? '#fff0f2' : '#f5f4f9', // Lighter, cleaner background
+  background: hasError ? '#fff0f2' : '#f5f4f9',
   fontFamily: "'Poppins', sans-serif",
-  fontSize: 14,         // Increased font size
+  fontSize: 14,
   color: '#1a1033',
   outline: 'none',
-  boxShadow: hasError ? '0 0 0 2.5px rgba(220,60,80,0.35)' : 'inset 0 2px 4px rgba(0,0,0,0.02)',
+  boxShadow: hasError
+    ? '0 0 0 2.5px rgba(220,60,80,0.35)'
+    : 'inset 0 2px 4px rgba(0,0,0,0.02)',
   transition: 'background 0.3s ease, box-shadow 0.3s ease',
 });
 
@@ -86,7 +88,7 @@ const errStyle: React.CSSProperties = {
 };
 
 const socialBtnStyle: React.CSSProperties = {
-  width: 48, height: 48, // Larger targets
+  width: 48, height: 48,
   borderRadius: '50%',
   border: '1.5px solid #eae6f7',
   background: '#fff',
@@ -98,33 +100,31 @@ const socialBtnStyle: React.CSSProperties = {
 };
 
 /* ── Animation Variants ──────────────────────────────────── */
-/* ── Animation Variants ──────────────────────────────────── */
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.08 }
-  }
+    transition: { staggerChildren: 0.08 },
+  },
 };
 
 const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 15 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { type: 'spring', stiffness: 300, damping: 24 } 
-  }
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 24 },
+  },
 };
 
 /* ── Main ────────────────────────────────────────────────── */
 export default function AuthPage() {
-  const [mode, setMode]         = useState<'login' | 'signup'>('login');
-  const [pwVal, setPwVal]       = useState('');
-  
-  // Mocks for development if hook is missing
-  const { loginMutation, signupMutation } = useAuth() || { 
-    loginMutation: { mutate: console.log, isPending: false }, 
-    signupMutation: { mutate: console.log, isPending: false } 
+  const [mode, setMode]   = useState<'login' | 'signup'>('login');
+  const [pwVal, setPwVal] = useState('');
+
+  const { loginMutation, signupMutation } = useAuth() || {
+    loginMutation:  { mutate: console.log, isPending: false },
+    signupMutation: { mutate: console.log, isPending: false },
   };
 
   const isLogin = mode === 'login';
@@ -145,50 +145,188 @@ export default function AuthPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        * { box-sizing: border-box; }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* Input focus & hover */
         .ft-input::placeholder { color: #bcb5d4; }
-        .ft-input:focus { background: #fff !important; box-shadow: 0 0 0 3px rgba(107, 92, 231, 0.25), 0 4px 12px rgba(0,0,0,0.05) !important; }
-        .ft-social:hover { border-color: #6b5ce7 !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(107, 92, 231, 0.15); }
-        .ft-ghost:hover { background: rgba(255,255,255,0.15) !important; border-color: #fff !important; transform: scale(1.02); }
+        .ft-input:focus {
+          background: #fff !important;
+          box-shadow: 0 0 0 3px rgba(107,92,231,0.25), 0 4px 12px rgba(0,0,0,0.05) !important;
+        }
+
+        /* Social button hover */
+        .ft-social:hover {
+          border-color: #6b5ce7 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(107,92,231,0.15);
+        }
+
+        /* Ghost button (overlay) */
+        .ft-ghost:hover {
+          background: rgba(255,255,255,0.15) !important;
+          border-color: #fff !important;
+          transform: scale(1.02);
+        }
+
+        /* Primary submit */
         .ft-primary { background: linear-gradient(135deg, #6b5ce7, #4a3aff); }
-        .ft-primary:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(107, 92, 231, 0.4) !important; }
+        .ft-primary:hover {
+          filter: brightness(1.1);
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px rgba(107,92,231,0.4) !important;
+        }
         .ft-primary:active { transform: scale(0.98); }
+
+        /* ── RESPONSIVE CARD LAYOUT ────────────────────────────
+           Desktop  (≥ 768px): side-by-side, sliding overlay
+           Mobile   (< 768px): single-column, tab switcher on top
+        ───────────────────────────────────────────────────── */
+
+        .auth-card {
+          width: 1024px;
+          min-height: 640px;
+          max-width: 100%;
+          border-radius: 32px;
+          background: #fff;
+          box-shadow: 0 40px 100px rgba(80,60,200,0.12), 0 10px 40px rgba(0,0,0,0.06);
+          display: flex;
+          overflow: hidden;
+          position: relative;
+        }
+
+        /* Form panels sit side-by-side on desktop */
+        .auth-form-panel {
+          flex: 1;
+          padding: 64px 56px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-width: 0;
+        }
+
+        /* Overlay takes up half width on desktop */
+        .auth-overlay {
+          position: absolute;
+          top: 0;
+          width: 50%;
+          height: 100%;
+        }
+
+        /* ── Mobile: stack vertically ── */
+        @media (max-width: 767px) {
+          .auth-card {
+            flex-direction: column;
+            border-radius: 24px;
+            min-height: unset;
+            width: 100%;
+          }
+
+          /* Overlay becomes a branded header strip at the top */
+          .auth-overlay {
+            position: relative !important;
+            width: 100% !important;
+            height: auto !important;
+            left: auto !important;
+            border-radius: 20px 20px 0 0 !important;
+            padding: 32px 24px 28px !important;
+          }
+
+          /* Hide the large decorative circles on mobile (they overflow) */
+          .auth-overlay-circle { display: none; }
+
+          /* Logo mark smaller on mobile */
+          .auth-overlay-logo {
+            width: 48px !important;
+            height: 48px !important;
+            border-radius: 14px !important;
+            margin-bottom: 20px !important;
+          }
+
+          /* Smaller headline */
+          .auth-overlay-headline { font-size: 24px !important; margin-bottom: 10px !important; }
+          .auth-overlay-sub      { font-size: 13px !important; margin-bottom: 20px !important; }
+
+          /* Feature list: horizontal chips instead of vertical list */
+          .auth-feature-list {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+            margin-bottom: 20px !important;
+          }
+          .auth-feature-item {
+            background: rgba(255,255,255,0.15) !important;
+            border-radius: 20px !important;
+            padding: 5px 10px 5px 8px !important;
+            font-size: 12px !important;
+          }
+
+          /* Switch button full-width on mobile */
+          .auth-switch-btn {
+            width: 100% !important;
+            padding: 12px 24px !important;
+            font-size: 13px !important;
+          }
+
+          /* Form panel full width, less padding */
+          .auth-form-panel {
+            padding: 28px 24px 36px !important;
+          }
+
+          /* Name row: stack on very small screens */
+          .name-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+        }
+
+        /* Fine-tune for small phones (≤ 390px) */
+        @media (max-width: 390px) {
+          .auth-overlay { padding: 24px 18px 22px !important; }
+          .auth-form-panel { padding: 22px 18px 32px !important; }
+          .auth-overlay-headline { font-size: 22px !important; }
+        }
+
+        /* Outer page padding — comfortable breathing room on all sizes */
+        .auth-page-wrap {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: clamp(16px, 4vw, 32px);
+          background: #f4f5f9;
+          font-family: 'Poppins', sans-serif;
+
+          /* iOS safe areas */
+          padding-top:    max(clamp(16px, 4vw, 32px), env(safe-area-inset-top));
+          padding-bottom: max(clamp(16px, 4vw, 32px), env(safe-area-inset-bottom));
+          padding-left:   max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
+          padding-right:  max(clamp(16px, 4vw, 32px), env(safe-area-inset-right));
+        }
       `}</style>
 
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-        background: '#f4f5f9', // Cleaner outer background
-        fontFamily: "'Poppins', sans-serif",
-      }}>
-        <div style={{
-          width: 1024,          // Increased Width
-          minHeight: 640,       // Increased Height
-          maxWidth: '100%',
-          borderRadius: 32,     // Smoother corners
-          background: '#fff',
-          boxShadow: '0 40px 100px rgba(80, 60, 200, 0.12), 0 10px 40px rgba(0,0,0,0.06)', // Deeper, softer shadow
-          display: 'flex',
-          overflow: 'hidden',
-          position: 'relative',
-        }}>
+      <div className="auth-page-wrap">
+        <div className="auth-card">
 
           {/* ── LOGIN FORM ── */}
-          <div style={{ flex: 1, padding: '64px 56px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div className="auth-form-panel">
             <AnimatePresence mode="wait">
               {isLogin && (
-                <motion.div 
-                  key="login" 
-                  initial="hidden" 
-                  animate="show" 
+                <motion.div
+                  key="login"
+                  initial="hidden"
+                  animate="show"
                   exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                   variants={staggerContainer}
                 >
-                  <motion.h2 variants={fadeUpVariant} style={{ fontSize: 32, fontWeight: 700, color: '#1a1033', marginBottom: 8 }}>Welcome back</motion.h2>
-                  <motion.p variants={fadeUpVariant} style={{ fontSize: 14, color: '#8a80a8', marginBottom: 32 }}>Sign in to your FinTrack account</motion.p>
+                  <motion.h2 variants={fadeUpVariant}
+                    style={{ fontSize: 32, fontWeight: 700, color: '#1a1033', marginBottom: 8 }}>
+                    Welcome back
+                  </motion.h2>
+                  <motion.p variants={fadeUpVariant}
+                    style={{ fontSize: 14, color: '#8a80a8', marginBottom: 32 }}>
+                    Sign in to your FinTrack account
+                  </motion.p>
 
                   {/* Social */}
                   <motion.div variants={fadeUpVariant} style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
@@ -197,7 +335,8 @@ export default function AuthPage() {
                     ))}
                   </motion.div>
 
-                  <motion.div variants={fadeUpVariant} style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+                  <motion.div variants={fadeUpVariant}
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
                     <div style={{ flex: 1, height: 1, background: '#f0eef5' }} />
                     <span style={{ fontSize: 13, color: '#b5aeca', fontWeight: 500 }}>or use your email</span>
                     <div style={{ flex: 1, height: 1, background: '#f0eef5' }} />
@@ -209,25 +348,34 @@ export default function AuthPage() {
                       <input
                         {...loginForm.register('email')}
                         type="email" placeholder="hello@fintrack.app"
-                        className="ft-input" style={inputStyle(!!loginForm.formState.errors.email)}
+                        className="ft-input"
+                        style={inputStyle(!!loginForm.formState.errors.email)}
                       />
-                      {loginForm.formState.errors.email && <p style={errStyle}>{loginForm.formState.errors.email.message}</p>}
+                      {loginForm.formState.errors.email && (
+                        <p style={errStyle}>{loginForm.formState.errors.email.message}</p>
+                      )}
                     </motion.div>
-                    
+
                     <motion.div variants={fadeUpVariant} style={{ marginBottom: 8 }}>
                       <label style={labelStyle}>Password</label>
                       <input
                         {...loginForm.register('password')}
                         type="password" placeholder="••••••••"
-                        className="ft-input" style={inputStyle(!!loginForm.formState.errors.password)}
+                        className="ft-input"
+                        style={inputStyle(!!loginForm.formState.errors.password)}
                       />
-                      {loginForm.formState.errors.password && <p style={errStyle}>{loginForm.formState.errors.password.message}</p>}
+                      {loginForm.formState.errors.password && (
+                        <p style={errStyle}>{loginForm.formState.errors.password.message}</p>
+                      )}
                     </motion.div>
-                    
-                    <motion.div variants={fadeUpVariant} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-                      <span style={{ fontSize: 13, color: '#6b5ce7', fontWeight: 600, cursor: 'pointer' }}>Forgot password?</span>
+
+                    <motion.div variants={fadeUpVariant}
+                      style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
+                      <span style={{ fontSize: 13, color: '#6b5ce7', fontWeight: 600, cursor: 'pointer' }}>
+                        Forgot password?
+                      </span>
                     </motion.div>
-                    
+
                     <motion.button
                       variants={fadeUpVariant}
                       type="submit"
@@ -238,7 +386,7 @@ export default function AuthPage() {
                         color: '#fff', fontFamily: "'Poppins', sans-serif",
                         fontSize: 15, fontWeight: 600, cursor: 'pointer',
                         letterSpacing: '0.5px',
-                        boxShadow: '0 8px 24px rgba(107, 92, 231, 0.3)',
+                        boxShadow: '0 8px 24px rgba(107,92,231,0.3)',
                         transition: 'all 0.2s ease',
                       }}
                     >
@@ -251,18 +399,24 @@ export default function AuthPage() {
           </div>
 
           {/* ── SIGNUP FORM ── */}
-          <div style={{ flex: 1, padding: '64px 56px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div className="auth-form-panel">
             <AnimatePresence mode="wait">
               {!isLogin && (
-                <motion.div 
-                  key="signup" 
-                  initial="hidden" 
-                  animate="show" 
+                <motion.div
+                  key="signup"
+                  initial="hidden"
+                  animate="show"
                   exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
                   variants={staggerContainer}
                 >
-                  <motion.h2 variants={fadeUpVariant} style={{ fontSize: 32, fontWeight: 700, color: '#1a1033', marginBottom: 8 }}>Create account</motion.h2>
-                  <motion.p variants={fadeUpVariant} style={{ fontSize: 14, color: '#8a80a8', marginBottom: 28 }}>Join FinTrack and take control</motion.p>
+                  <motion.h2 variants={fadeUpVariant}
+                    style={{ fontSize: 32, fontWeight: 700, color: '#1a1033', marginBottom: 8 }}>
+                    Create account
+                  </motion.h2>
+                  <motion.p variants={fadeUpVariant}
+                    style={{ fontSize: 14, color: '#8a80a8', marginBottom: 28 }}>
+                    Join FinTrack and take control
+                  </motion.p>
 
                   <motion.div variants={fadeUpVariant} style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
                     {[<FacebookIcon key="fb"/>, <TwitterIcon key="tw"/>, <LinkedInIcon key="li"/>].map((icon, i) => (
@@ -270,33 +424,48 @@ export default function AuthPage() {
                     ))}
                   </motion.div>
 
-                  <motion.div variants={fadeUpVariant} style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                  <motion.div variants={fadeUpVariant}
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
                     <div style={{ flex: 1, height: 1, background: '#f0eef5' }} />
                     <span style={{ fontSize: 13, color: '#b5aeca', fontWeight: 500 }}>or use your email</span>
                     <div style={{ flex: 1, height: 1, background: '#f0eef5' }} />
                   </motion.div>
 
                   <form onSubmit={signupForm.handleSubmit(onSignup)}>
-                    <motion.div variants={fadeUpVariant} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                    {/* Name row — stacks to 1 col on small phones via .name-grid */}
+                    <motion.div variants={fadeUpVariant}
+                      className="name-grid"
+                      style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                       <div>
                         <label style={labelStyle}>First name</label>
                         <input {...signupForm.register('firstName')} type="text" placeholder="Astra"
-                          className="ft-input" style={inputStyle(!!signupForm.formState.errors.firstName)} />
+                          className="ft-input"
+                          style={inputStyle(!!signupForm.formState.errors.firstName)} />
+                        {signupForm.formState.errors.firstName && (
+                          <p style={errStyle}>{signupForm.formState.errors.firstName.message}</p>
+                        )}
                       </div>
                       <div>
                         <label style={labelStyle}>Last name</label>
                         <input {...signupForm.register('lastName')} type="text" placeholder="Doe"
-                          className="ft-input" style={inputStyle(!!signupForm.formState.errors.lastName)} />
+                          className="ft-input"
+                          style={inputStyle(!!signupForm.formState.errors.lastName)} />
+                        {signupForm.formState.errors.lastName && (
+                          <p style={errStyle}>{signupForm.formState.errors.lastName.message}</p>
+                        )}
                       </div>
                     </motion.div>
-                    
+
                     <motion.div variants={fadeUpVariant} style={{ marginBottom: 16 }}>
                       <label style={labelStyle}>Email address</label>
                       <input {...signupForm.register('email')} type="email" placeholder="hello@fintrack.app"
-                        className="ft-input" style={inputStyle(!!signupForm.formState.errors.email)} />
-                      {signupForm.formState.errors.email && <p style={errStyle}>{signupForm.formState.errors.email.message}</p>}
+                        className="ft-input"
+                        style={inputStyle(!!signupForm.formState.errors.email)} />
+                      {signupForm.formState.errors.email && (
+                        <p style={errStyle}>{signupForm.formState.errors.email.message}</p>
+                      )}
                     </motion.div>
-                    
+
                     <motion.div variants={fadeUpVariant} style={{ marginBottom: 12 }}>
                       <label style={labelStyle}>Password</label>
                       <input
@@ -304,21 +473,30 @@ export default function AuthPage() {
                         type="password" placeholder="Min. 8 characters"
                         className="ft-input"
                         style={inputStyle(!!signupForm.formState.errors.password)}
-                        onChange={(e) => { setPwVal(e.target.value); signupForm.setValue('password', e.target.value); }}
+                        onChange={(e) => {
+                          setPwVal(e.target.value);
+                          signupForm.setValue('password', e.target.value);
+                        }}
                       />
                       {pwVal && (
-                        <div style={{ height: 6, borderRadius: 6, background: '#f0eef5', marginTop: 10, overflow: 'hidden' }}>
+                        <div style={{
+                          height: 6, borderRadius: 6,
+                          background: '#f0eef5',
+                          marginTop: 10, overflow: 'hidden',
+                        }}>
                           <div style={{
                             height: '100%', borderRadius: 6,
                             width: `${strength * 25}%`,
                             background: STRENGTH_COLOR[strength - 1] ?? '#f0eef5',
-                            transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease',
+                            transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1), background 0.4s ease',
                           }} />
                         </div>
                       )}
-                      {signupForm.formState.errors.password && <p style={errStyle}>{signupForm.formState.errors.password.message}</p>}
+                      {signupForm.formState.errors.password && (
+                        <p style={errStyle}>{signupForm.formState.errors.password.message}</p>
+                      )}
                     </motion.div>
-                    
+
                     <motion.button
                       variants={fadeUpVariant}
                       type="submit"
@@ -329,7 +507,7 @@ export default function AuthPage() {
                         color: '#fff', fontFamily: "'Poppins', sans-serif",
                         fontSize: 15, fontWeight: 600, cursor: 'pointer',
                         marginTop: 16, letterSpacing: '0.5px',
-                        boxShadow: '0 8px 24px rgba(107, 92, 231, 0.3)',
+                        boxShadow: '0 8px 24px rgba(107,92,231,0.3)',
                         transition: 'all 0.2s ease',
                       }}
                     >
@@ -341,55 +519,64 @@ export default function AuthPage() {
             </AnimatePresence>
           </div>
 
-          {/* ── SLIDING OVERLAY ── */}
+          {/* ── SLIDING OVERLAY (desktop) / HEADER STRIP (mobile) ── */}
           <motion.div
+            className="auth-overlay"
             animate={{ left: isLogin ? '50%' : '0%' }}
-            transition={{ duration: 0.7, ease: [0.65, 0, 0.35, 1] }} // Smoother, non-bouncy spring
+            transition={{ duration: 0.7, ease: [0.65, 0, 0.35, 1] }}
             style={{
-              position: 'absolute',
-              top: 0, width: '50%', height: '100%',
-              background: 'linear-gradient(145deg, #6b5ce7 0%, #5a4bdf 50%, #4032ba 100%)', // Richer gradient
+              background: 'linear-gradient(145deg, #6b5ce7 0%, #5a4bdf 50%, #4032ba 100%)',
               borderRadius: isLogin ? '0 32px 32px 0' : '32px 0 0 32px',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              padding: '64px 48px', textAlign: 'center',
-              zIndex: 10, overflow: 'hidden',
-              boxShadow: isLogin ? '-10px 0 30px rgba(0,0,0,0.05)' : '10px 0 30px rgba(0,0,0,0.05)'
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '64px 48px',
+              textAlign: 'center',
+              zIndex: 10,
+              overflow: 'hidden',
+              boxShadow: isLogin
+                ? '-10px 0 30px rgba(0,0,0,0.05)'
+                : '10px 0 30px rgba(0,0,0,0.05)',
             }}
           >
-            {/* Animated Decorative circles */}
-            <motion.div 
+            {/* Decorative circles — hidden on mobile via .auth-overlay-circle */}
+            <motion.div
+              className="auth-overlay-circle"
               animate={{ scale: [1, 1.05, 1], opacity: [0.06, 0.08, 0.06] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
               style={{
                 position: 'absolute', width: 300, height: 300, borderRadius: '50%',
                 background: '#fff', top: -80, right: -80, pointerEvents: 'none',
-              }} 
+              }}
             />
-            <motion.div 
+            <motion.div
+              className="auth-overlay-circle"
               animate={{ scale: [1, 1.1, 1], opacity: [0.04, 0.06, 0.04] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
               style={{
                 position: 'absolute', width: 200, height: 200, borderRadius: '50%',
                 background: '#fff', bottom: -50, left: -50, pointerEvents: 'none',
-              }} 
+              }}
             />
 
-            {/* Logo mark - Added floating animation */}
-            <motion.div 
+            {/* Logo mark */}
+            <motion.div
+              className="auth-overlay-logo"
               animate={{ y: [-5, 5, -5] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
                 width: 64, height: 64, borderRadius: 20,
                 background: 'rgba(255,255,255,0.15)',
-                backdropFilter: 'blur(10px)', // Glassmorphism touch
+                backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255,255,255,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: 32,
+                marginBottom: 32, flexShrink: 0,
               }}
             >
               <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
-                <path d="M4 20 L10 12 L16 16 L22 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M4 20 L10 12 L16 16 L22 6"
+                  stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 <circle cx="22" cy="6" r="3" fill="white" />
               </svg>
             </motion.div>
@@ -401,23 +588,52 @@ export default function AuthPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 0.3 }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1 }}
+                style={{
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', zIndex: 1, width: '100%',
+                }}
               >
-                <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 16, lineHeight: 1.1 }}>
+                <h2 className="auth-overlay-headline"
+                  style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 16, lineHeight: 1.1 }}>
                   {isLogin ? 'New here?' : 'Welcome back!'}
                 </h2>
-                <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: 1.6, marginBottom: 36, maxWidth: 280 }}>
+                <p className="auth-overlay-sub"
+                  style={{
+                    fontSize: 15, color: 'rgba(255,255,255,0.8)',
+                    lineHeight: 1.6, marginBottom: 36, maxWidth: 280,
+                  }}>
                   {isLogin
                     ? 'Sign up and start tracking your finances smarter — budgets, goals, and AI insights.'
                     : 'Already have an account? Sign in and pick up right where you left off.'}
                 </p>
 
                 {isLogin && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 36, alignSelf: 'stretch' }}>
+                  <div
+                    className="auth-feature-list"
+                    style={{
+                      display: 'flex', flexDirection: 'column',
+                      gap: 14, marginBottom: 36, alignSelf: 'stretch',
+                    }}
+                  >
                     {['Real-time analytics', 'AI-powered insights', 'Bank-grade security'].map((f) => (
-                      <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <div
+                        key={f}
+                        className="auth-feature-item"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          fontSize: 14, color: 'rgba(255,255,255,0.9)', fontWeight: 500,
+                        }}
+                      >
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%',
+                          background: 'rgba(255,255,255,0.2)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                        }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
                         </div>
                         {f}
                       </div>
@@ -428,7 +644,7 @@ export default function AuthPage() {
             </AnimatePresence>
 
             <button
-              className="ft-ghost"
+              className="ft-ghost auth-switch-btn"
               onClick={() => setMode(isLogin ? 'signup' : 'login')}
               style={{
                 padding: '14px 40px', borderRadius: 14,
@@ -438,7 +654,7 @@ export default function AuthPage() {
                 fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 letterSpacing: '1px', textTransform: 'uppercase',
                 transition: 'all 0.3s ease',
-                zIndex: 1
+                zIndex: 1,
               }}
             >
               {isLogin ? 'SIGN UP' : 'LOGIN'}
