@@ -2,7 +2,9 @@
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/useAppStore';
+import { PageLoader } from './dashboard/components/loader';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -10,25 +12,47 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * ThemeSyncer — applies data-theme on <html> at boot (before TopBar mounts).
+ * TopBar.tsx also calls this on every toggle, so they stay in sync.
+ */
 function ThemeSyncer() {
-  const [mounted, setMounted] = useState(false);
   const isDarkMode = useAppStore((s) => s.isDarkMode);
-
   useEffect(() => {
-    setMounted(true);
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
-
-  // Don't render until client-side
-  if (!mounted) return null;
   return null;
+}
+
+function AppBootstrap({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <>
+      <AnimatePresence>
+        {!ready && <PageLoader key="loader" />}
+      </AnimatePresence>
+      <div style={{ opacity: ready ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+        {children}
+      </div>
+    </>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Boot-time theme sync — TopBar keeps it in sync after mount */}
       <ThemeSyncer />
-      {children}
+      <AppBootstrap>
+        {children}
+      </AppBootstrap>
       <Toaster
         position="top-right"
         toastOptions={{

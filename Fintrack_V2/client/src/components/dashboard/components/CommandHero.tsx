@@ -1,11 +1,10 @@
 'use client';
 import { motion }              from 'framer-motion';
-import { Eye, EyeOff, RefreshCw, Plus, Sun, Moon } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, Plus } from 'lucide-react';
 import { useRouter }           from 'next/navigation';
 import { useWealth }           from '@/hooks/usewealth';
 import { useDashboardStore }   from '@/hooks/useDashboard';
 import { useAppStore }         from '@/store/useAppStore';
-import { useTheme }            from '../../../hooks/usetheme';
 import { V, SYNE, SANS }       from '../../../utils/dashboard/tokens';
 import { CopilotOmnibar }      from './CopilotOmnibar';
 
@@ -13,7 +12,6 @@ export function CommandHero() {
   const user     = useAppStore(s => s.user);
   const { isMasked, togglePrivacyMode } = useDashboardStore();
   const { refetch, isFetching }         = useWealth();
-  const { isDark, toggle: toggleTheme } = useTheme();
   const router   = useRouter();
 
   const name     = user?.email?.split('@')[0] ?? 'there';
@@ -44,13 +42,13 @@ export function CommandHero() {
         <p style={{ fontSize: 11, color: V.text2, fontFamily: SANS, transition: 'color 0.3s' }}>{date}</p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
         <CopilotOmnibar />
 
         <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
           onClick={() => router.push('/transactions')}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1px solid ${V.border}`, background: V.raised, cursor: 'pointer', fontFamily: SANS, color: V.text1, fontSize: 12, transition: 'all 0.2s' }}>
-          <Plus size={13} color={V.jade} /> Add Transaction
+          <Plus size={13} color={V.jade} /> <span className="hide-xs">Add Transaction</span>
         </motion.button>
 
         {iconBtn(() => refetch(), false,
@@ -58,9 +56,6 @@ export function CommandHero() {
         )}
         {iconBtn(togglePrivacyMode, isMasked,
           isMasked ? <EyeOff size={13} /> : <Eye size={13} />
-        )}
-        {iconBtn(toggleTheme, false,
-          isDark ? <Sun size={13} /> : <Moon size={13} />
         )}
       </div>
     </motion.div>

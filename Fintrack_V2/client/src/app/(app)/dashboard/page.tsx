@@ -1,37 +1,38 @@
 'use client';
-import { useState }         from 'react';
-import { useWealth }        from '@/hooks/usewealth';
-import { useTransactions }  from '@/hooks/useTransactions';
-import { useBudgets }       from '@/hooks/useBudgets';
+import { useState, useEffect } from 'react';
+import { useWealth }           from '@/hooks/usewealth';
+import { useTransactions }     from '@/hooks/useTransactions';
+import { useBudgets }          from '@/hooks/useBudgets';
+import { useAppStore }         from '@/store/useAppStore';
 import { Transaction, Budget } from '../../../utils/dashboard/types';
-import { ThemeProvider, useTheme } from '@/hooks/usetheme';
-import { DashboardLoader }    from '../../../components/dashboard/components/Dashboardloader';
-import { CommandHero }        from '../../../components/dashboard/components/CommandHero';
-import { MacroBento }         from '../../../components/dashboard/components/MacroBento';
-import { KpiRow }             from '../../../components/dashboard/components/KpiRow';
-import { IncomeChart }        from '../../../components/dashboard/components/IncomeChart';
-import { PortfolioHeatmap }   from '../../../components/dashboard/components/PortfolioHeatmap';
-import { RecentTransactions } from '../../../components/dashboard/components/RecentTransactions';
-import { InsightsPanel }      from '@/components/dashboard/components/InsightsPanel';
+import { DashboardLoader }     from '../../../components/dashboard/components/Dashboardloader';
+import { CommandHero }         from '../../../components/dashboard/components/CommandHero';
+import { MacroBento }          from '../../../components/dashboard/components/MacroBento';
+import { KpiRow }              from '../../../components/dashboard/components/KpiRow';
+import { IncomeChart }         from '../../../components/dashboard/components/IncomeChart';
+import { PortfolioHeatmap }    from '../../../components/dashboard/components/PortfolioHeatmap';
+import { RecentTransactions }  from '../../../components/dashboard/components/RecentTransactions';
+import { InsightsPanel }       from '@/components/dashboard/components/InsightsPanel';
 
 export default function DashboardPage() {
   const [loaded, setLoaded] = useState(false);
+  const isDark = useAppStore(s => s.isDarkMode);
 
   const { isLoading: wealthLoading }         = useWealth();
   const { data: txns = [], isLoading: txnL } = useTransactions() as { data: Transaction[]; isLoading: boolean };
   const { data: budgets = [] }               = useBudgets() as { data: Budget[] };
 
-  // Show the skeleton loader until data is ready (or at least 1.8s)
+  // Sync --ft-* CSS variables with the global app theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
   if (!loaded) {
-    return (
-      <ThemeProvider>
-        <DashboardLoader onDone={() => setLoaded(true)} />
-      </ThemeProvider>
-    );
+    return <DashboardLoader onDone={() => setLoaded(true)} />;
   }
 
   return (
-    <ThemeProvider>
+    <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
 
@@ -156,10 +157,28 @@ export default function DashboardPage() {
           .engine-kpi-row  { grid-template-columns: repeat(3, 1fr); }
           .tactical-bottom { grid-template-columns: 1fr; }
         }
-        @media (max-width: 700px) {
-          .bento-macro     { grid-template-columns: 1fr 1fr; }
-          .engine-kpi-row  { grid-template-columns: 1fr 1fr; }
+
+        /* ── Tablet (768px) ── */
+        @media (max-width: 768px) {
+          .bento-macro     { grid-template-columns: 1fr 1fr; gap: 8px; }
+          .engine-kpi-row  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+          .tactical-bottom { grid-template-columns: 1fr; gap: 8px; }
+          .engine-room     { gap: 8px; }
+          .tactical-floor  { gap: 8px; }
+        }
+
+        /* ── Mobile (480px) ── */
+        @media (max-width: 480px) {
+          .bento-macro     { grid-template-columns: 1fr; gap: 8px; }
+          .engine-kpi-row  { grid-template-columns: 1fr 1fr; gap: 8px; }
           .tactical-bottom { grid-template-columns: 1fr; }
+
+          /* Tighten the CommandHero on mobile */
+          .hero-greeting h1  { font-size: 20px !important; }
+          .hero-greeting p   { font-size: 10px !important; }
+
+          /* Hide "Add Transaction" text, keep icon */
+          .hide-xs { display: none; }
         }
 
         /* ── KPI card text in light mode ── */
@@ -185,6 +204,18 @@ export default function DashboardPage() {
 
         /* ── Portfolio heatmap empty state ── */
         [data-theme="light"] .heatmap-empty-text { color: #4A5568 !important; }
+
+        /* ── Mobile touch improvements ── */
+        @media (hover: none) {
+          /* Larger tap targets on touch devices */
+          button { min-height: 36px; }
+        }
+
+        /* ── Copilot omnibar mobile ── */
+        @media (max-width: 480px) {
+          .copilot-trigger span:not(.copilot-shortcut) { display: none; }
+          .copilot-shortcut { display: none; }
+        }
       `}</style>
 
       {/* Film grain overlay — hidden in light mode via --ft-grain-op */}
@@ -220,6 +251,6 @@ export default function DashboardPage() {
           <RecentTransactions txns={txns} />
         </div>
       </div>
-    </ThemeProvider>
+    </>
   );
 }
