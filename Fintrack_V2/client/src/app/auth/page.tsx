@@ -158,7 +158,7 @@ export default function AuthPage() {
   function onDemoLogin() {
     setDemoLoading(true);
     loginMutation.mutate(
-      { email: 'john.doe@example.com', password: 'Pass@123' },
+      { email: 'john.doe@test.com', password: 'Pass@123' },
       {
         onSettled: () => setDemoLoading(false),
       }
