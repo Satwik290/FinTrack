@@ -54,6 +54,18 @@ function LinkedInIcon() {
   );
 }
 
+/* ── Recruiter icon ──────────────────────────────────────── */
+function RecruiterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 /* ── Shared styles ───────────────────────────────────────── */
 const inputStyle = (hasError = false): React.CSSProperties => ({
   width: '100%',
@@ -121,6 +133,7 @@ const fadeUpVariant: Variants = {
 export default function AuthPage() {
   const [mode, setMode]   = useState<'login' | 'signup'>('login');
   const [pwVal, setPwVal] = useState('');
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const { loginMutation, signupMutation } = useAuth() || {
     loginMutation:  { mutate: console.log, isPending: false },
@@ -139,6 +152,17 @@ export default function AuthPage() {
   }
   function onSignup(data: SignupForm) {
     signupMutation.mutate({ email: data.email, password: data.password });
+  }
+
+  // Handle demo recruiter login
+  function onDemoLogin() {
+    setDemoLoading(true);
+    loginMutation.mutate(
+      { email: 'john.doe@example.com', password: 'Pass@123' },
+      {
+        onSettled: () => setDemoLoading(false),
+      }
+    );
   }
 
   return (
@@ -160,6 +184,37 @@ export default function AuthPage() {
           border-color: #6b5ce7 !important;
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(107,92,231,0.15);
+        }
+
+        /* Demo button styling */
+        .ft-demo {
+          width: 100%;
+          padding: 14px 16px;
+          border-radius: 12px;
+          border: 1.5px solid #6b5ce7;
+          background: rgba(107, 92, 231, 0.06);
+          color: #6b5ce7;
+          font-family: "'Poppins', sans-serif";
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+          letter-spacing: 0.5px;
+        }
+
+        .ft-demo:hover {
+          background: rgba(107, 92, 231, 0.12);
+          border-color: #5a4bdf;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(107,92,231,0.2);
+        }
+
+        .ft-demo:active {
+          transform: scale(0.98);
         }
 
         /* Ghost button (overlay) */
@@ -393,6 +448,32 @@ export default function AuthPage() {
                       {loginMutation.isPending ? 'Signing in…' : 'Sign In'}
                     </motion.button>
                   </form>
+
+                  {/* ── DEMO / RECRUITER LOGIN BUTTON ── */}
+                  <motion.div variants={fadeUpVariant}
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '24px 0 0 0' }}>
+                    <div style={{ flex: 1, height: 1, background: '#f0eef5' }} />
+                    <span style={{ fontSize: 12, color: '#b5aeca', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      Demo access
+                    </span>
+                    <div style={{ flex: 1, height: 1, background: '#f0eef5' }} />
+                  </motion.div>
+
+                  <motion.button
+                    variants={fadeUpVariant}
+                    type="button"
+                    className="ft-demo"
+                    disabled={demoLoading || loginMutation.isPending}
+                    onClick={onDemoLogin}
+                    style={{
+                      marginTop: 16,
+                      opacity: demoLoading || loginMutation.isPending ? 0.6 : 1,
+                      pointerEvents: demoLoading || loginMutation.isPending ? 'none' : 'auto',
+                    }}
+                  >
+                    <RecruiterIcon />
+                    {demoLoading ? 'Loading demo…' : 'Try Demo (Recruiter)'}
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
